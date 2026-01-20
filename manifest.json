@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "My Custom Cart - Amazon",
+  "version": "1.0.0",
+  "description": "Add Amazon products to your own custom cart and checkout seamlessly",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://www.amazon.com/*", "https://amazon.com/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/favicon-32x32.png",
+      "32": "icons/favicon-32x32.png",
+      "48": "icons/favicon-32x32.png",
+      "128": "icons/favicon-32x32.png"
+    }
+  },
+  "icons": {
+    "16": "icons/favicon-32x32.png",
+    "32": "icons/favicon-32x32.png",
+    "48": "icons/favicon-32x32.png",
+    "128": "icons/favicon-32x32.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.amazon.com/*", "https://amazon.com/*"],
+      "js": ["content.js"],
+      "css": ["content-styles.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["logoPalindromePay.png", "palindromepay-crypto-escrow-payment.png", "injected.js"],
+      "matches": ["https://www.amazon.com/*", "https://amazon.com/*"]
+    }
+  ]
+}

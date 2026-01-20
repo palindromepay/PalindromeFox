@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Checkout - Palindrome Pay</title>
+  <!-- Web3Modal for wallet connection in extension context -->
+  <script src="https://unpkg.com/@web3modal/cdn@5.1.8"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #667eea;
+      --primary-dark: #5a67d8;
+      --secondary: #764ba2;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #1a1a2e;
+      --text-light: #6b7280;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e5e7eb;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    .checkout-container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .checkout-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .checkout-header h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .checkout-header p {
+      color: var(--text-light);
+    }
+
+    .powered-by-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .header-logo {
+      height: 32px;
+      width: auto;
+      vertical-align: middle;
+    }
+
+    .checkout-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .checkout-card h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .order-items {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .order-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-item-image {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--bg);
+    }
+
+    .order-item-details {
+      flex: 1;
+    }
+
+    .order-item-title {
+      font-size: 14px;
+      font-weight: 500;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .order-item-qty {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .order-item-price {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .summary-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid var(--border);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 15px;
+    }
+
+    .summary-row.total {
+      font-size: 18px;
+      font-weight: 700;
+      padding-top: 12px;
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .summary-row.crypto {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .wallet-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 12px;
+    }
+
+    .wallet-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wallet-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: white;
+    }
+
+    .wallet-info h3 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .wallet-info p {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .wallet-info .address {
+      font-family: monospace;
+      color: var(--primary);
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 2px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .escrow-info {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    .escrow-info h4 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .escrow-info ul {
+      list-style: none;
+      font-size: 13px;
+    }
+
+    .escrow-info li {
+      padding: 6px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .escrow-info li::before {
+      content: '✓';
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .status-section {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .status-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .status-icon.loading {
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      animation: spin 1s linear infinite;
+    }
+
+    .status-icon.success {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .status-icon.success svg {
+      stroke: var(--success);
+    }
+
+    .status-icon.error {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .status-icon.error svg {
+      stroke: var(--danger);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status-text {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .status-details {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .tx-hash {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--primary);
+      word-break: break-all;
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+    }
+
+    .tx-hash a {
+      color: var(--primary);
+    }
+
+    .steps {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .step {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--border);
+      color: var(--text-light);
+    }
+
+    .step.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .step.completed {
+      background: var(--success);
+      color: white;
+    }
+
+    .step-line {
+      width: 40px;
+      height: 2px;
+      background: var(--border);
+      align-self: center;
+    }
+
+    .step-line.completed {
+      background: var(--success);
+    }
+
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--bg);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .network-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <header class="checkout-header">
+      <h1>Crypto Checkout</h1>
+      <p class="powered-by-header"><img src="palindromepay-crypto-escrow-payment.png" alt="Palindrome Pay - Crypto Escrow Payment" class="header-logo" /></p>
+    </header>
+
+    <!-- Progress Steps -->
+    <div class="steps">
+      <div class="step active" id="step1">1</div>
+      <div class="step-line" id="line1"></div>
+      <div class="step" id="step2">2</div>
+      <div class="step-line" id="line2"></div>
+      <div class="step" id="step3">3</div>
+    </div>
+
+    <!-- Order Summary Card -->
+    <div class="checkout-card" id="orderCard">
+      <h2>Order Summary</h2>
+      <div class="order-items" id="orderItems">
+        <!-- Items will be populated here -->
+      </div>
+      <div class="summary-section">
+        <div class="summary-row">
+          <span>Subtotal (USD)</span>
+          <span id="subtotalUSD">$0.00</span>
+        </div>
+        <div class="summary-row crypto">
+          <span>Payment Amount</span>
+          <span id="paymentAmount">0 USDT</span>
+        </div>
+        <div class="summary-row">
+          <span>Escrow Fee (1%)</span>
+          <span id="escrowFee">0 USDT</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total</span>
+          <span id="totalAmount">0 USDT</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wallet Connection Card -->
+    <div class="checkout-card" id="walletCard">
+      <h2>Connect Wallet</h2>
+      <div class="wallet-section">
+        <div class="wallet-status" id="walletStatus">
+          <div class="wallet-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <path d="M2 10h20"></path>
+            </svg>
+          </div>
+          <div class="wallet-info">
+            <h3 id="walletTitle">No Wallet Connected</h3>
+            <p id="walletAddress">Connect your wallet to continue</p>
+          </div>
+        </div>
+
+        <div id="networkInfo" class="hidden">
+          <span class="network-badge">
+            <span class="network-dot"></span>
+            <span id="networkName">Base</span>
+          </span>
+        </div>
+
+        <button class="btn btn-secondary" id="connectBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <path d="M2 10h20"></path>
+          </svg>
+          Connect Wallet
+        </button>
+
+        <div class="escrow-info">
+          <h4>🛡️ Escrow Protection</h4>
+          <ul>
+            <li>Your funds are held securely until you confirm delivery</li>
+            <li>Dispute resolution available if issues arise</li>
+            <li>Auto-release to seller after <span id="maturityDays">7</span> days</li>
+            <li>1% platform fee for escrow protection</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Card -->
+    <div class="checkout-card" id="paymentCard">
+      <h2>Complete Payment</h2>
+      
+      <div id="approvalSection" class="hidden">
+        <p style="margin-bottom: 16px; color: var(--text-light);">
+          Step 1: Approve USDT spending
+        </p>
+        <button class="btn btn-secondary" id="approveBtn">
+          Approve USDT
+        </button>
+      </div>
+
+      <div id="paySection">
+        <button class="btn btn-primary" id="payBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+          Create Escrow & Pay
+        </button>
+      </div>
+
+      <div id="errorMessage" class="error-message hidden"></div>
+    </div>
+
+    <!-- Status Card (shown during/after transaction) -->
+    <div class="checkout-card hidden" id="statusCard">
+      <div class="status-section">
+        <div class="status-icon loading" id="statusIcon"></div>
+        <div class="status-text" id="statusText">Processing...</div>
+        <div class="status-details" id="statusDetails">Please wait while we process your payment</div>
+        <div class="tx-hash hidden" id="txHashSection">
+          Transaction: <a href="#" target="_blank" id="txHashLink"></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ============================================================================
+    // CHECKOUT PAGE SCRIPT
+    // ============================================================================
+
+    // Chain configurations
+    const CHAINS = {
+      8453: {
+        name: 'Base',
+        rpcUrl: 'https://mainnet.base.org',
+        explorer: 'https://basescan.org',
+        usdt: '0xf8a8519313befc293bbe86fd40e993655cf7436b'
+      },
+      84532: {
+        name: 'Base Sepolia',
+        rpcUrl: 'https://sepolia.base.org',
+        explorer: 'https://sepolia.basescan.org',
+        usdt: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+      },
+      137: {
+        name: 'Polygon',
+        rpcUrl: 'https://polygon-rpc.com',
+        explorer: 'https://polygonscan.com',
+        usdt: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'
+      }
+    };
+
+    // State
+    let checkoutData = null;
+    let settings = null;
+    let walletConnected = false;
+    let userAddress = null;
+    let currentChain = null;
+
+    // Elements
+    const elements = {
+      orderItems: document.getElementById('orderItems'),
+      subtotalUSD: document.getElementById('subtotalUSD'),
+      paymentAmount: document.getElementById('paymentAmount'),
+      escrowFee: document.getElementById('escrowFee'),
+      totalAmount: document.getElementById('totalAmount'),
+      maturityDays: document.getElementById('maturityDays'),
+      connectBtn: document.getElementById('connectBtn'),
+      walletTitle: document.getElementById('walletTitle'),
+      walletAddress: document.getElementById('walletAddress'),
+      networkInfo: document.getElementById('networkInfo'),
+      networkName: document.getElementById('networkName'),
+      approvalSection: document.getElementById('approvalSection'),
+      approveBtn: document.getElementById('approveBtn'),
+      payBtn: document.getElementById('payBtn'),
+      errorMessage: document.getElementById('errorMessage'),
+      statusCard: document.getElementById('statusCard'),
+      statusIcon: document.getElementById('statusIcon'),
+      statusText: document.getElementById('statusText'),
+      statusDetails: document.getElementById('statusDetails'),
+      txHashSection: document.getElementById('txHashSection'),
+      txHashLink: document.getElementById('txHashLink'),
+      step1: document.getElementById('step1'),
+      step2: document.getElementById('step2'),
+      step3: document.getElementById('step3'),
+      line1: document.getElementById('line1'),
+      line2: document.getElementById('line2'),
+    };
+
+    // Initialize
+    async function init() {
+      // Get checkout data from extension storage
+      const storage = await chrome.storage.local.get(['pendingCheckout', 'settings']);
+      checkoutData = storage.pendingCheckout;
+      settings = storage.settings;
+
+      if (!checkoutData || !checkoutData.cart || checkoutData.cart.length === 0) {
+        showError('No checkout data found. Please try again from the cart.');
+        return;
+      }
+
+      renderOrder();
+      setupEventListeners();
+    }
+
+    function renderOrder() {
+      const { cart, totalUSD } = checkoutData;
+      
+      // Render order items
+      elements.orderItems.innerHTML = cart.map(item => `
+        <div class="order-item">
+          <img class="order-item-image" src="${item.imageUrl || ''}" alt="" 
+               onerror="this.style.display='none'">
+          <div class="order-item-details">
+            <div class="order-item-title">${escapeHtml(item.title)}</div>
+            <div class="order-item-qty">Qty: ${item.quantity}</div>
+          </div>
+          <div class="order-item-price">${item.price || 'N/A'}</div>
+        </div>
+      `).join('');
+
+      // Update totals
+      const fee = totalUSD * 0.01;
+      const total = totalUSD + fee;
+
+      elements.subtotalUSD.textContent = `$${totalUSD.toFixed(2)}`;
+      elements.paymentAmount.textContent = `${totalUSD.toFixed(2)} USDT`;
+      elements.escrowFee.textContent = `${fee.toFixed(2)} USDT`;
+      elements.totalAmount.textContent = `${total.toFixed(2)} USDT`;
+      elements.maturityDays.textContent = settings?.maturityDays || 7;
+    }
+
+    function setupEventListeners() {
+      elements.connectBtn.addEventListener('click', connectWallet);
+      elements.approveBtn.addEventListener('click', approveTokens);
+      elements.payBtn.addEventListener('click', createEscrow);
+    }
+
+    // Web3Modal instance
+    let modal = null;
+
+    // Initialize Web3Modal
+    async function initWeb3Modal() {
+      try {
+        // Check if Web3Modal CDN loaded
+        if (typeof window.Web3Modal !== 'undefined') {
+          modal = new window.Web3Modal.Web3Modal({
+            projectId: 'demo-project-id', // Replace with your WalletConnect project ID
+            chains: [8453, 84532, 137], // Base, Base Sepolia, Polygon
+            enableAnalytics: false
+          });
+        }
+      } catch (e) {
+        console.log('Web3Modal init error:', e);
+      }
+    }
+
+    // Call init on load
+    initWeb3Modal();
+
+    async function connectWallet() {
+      try {
+        elements.connectBtn.disabled = true;
+        elements.connectBtn.textContent = 'Connecting...';
+
+        let accounts = [];
+        let provider = null;
+
+        // Try window.ethereum first (works if opened in regular browser context)
+        if (typeof window.ethereum !== 'undefined') {
+          provider = window.ethereum;
+          accounts = await provider.request({ method: 'eth_requestAccounts' });
+        }
+        // Try Web3Modal as fallback
+        else if (modal) {
+          await modal.open();
+          // Web3Modal handles connection via its UI
+          showError('Please complete wallet connection in the Web3Modal popup.');
+          elements.connectBtn.disabled = false;
+          elements.connectBtn.textContent = 'Connect Wallet';
+          return;
+        }
+        else {
+          // No wallet available - show instructions
+          showError('No wallet detected. This page is running in extension context where MetaMask cannot inject. Please use WalletConnect or open the checkout URL in a regular browser tab.');
+          elements.connectBtn.disabled = false;
+          elements.connectBtn.textContent = 'Connect Wallet';
+          return;
+        }
+
+        if (accounts.length > 0) {
+          userAddress = accounts[0];
+          walletConnected = true;
+
+          // Get current chain
+          const chainId = await provider.request({ method: 'eth_chainId' });
+          currentChain = parseInt(chainId, 16);
+
+          updateWalletUI();
+          updateSteps(2);
+
+          // Check if we need to switch chains
+          const targetChain = settings?.chainId || 8453;
+          if (currentChain !== targetChain) {
+            await switchChain(targetChain);
+          }
+
+          elements.payBtn.disabled = false;
+        }
+      } catch (error) {
+        showError('Failed to connect wallet: ' + error.message);
+      } finally {
+        elements.connectBtn.disabled = false;
+        elements.connectBtn.innerHTML = walletConnected ?
+          '✓ Connected' :
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M2 10h20"></path></svg> Connect Wallet';
+      }
+    }
+
+    async function switchChain(targetChainId) {
+      const chainConfig = CHAINS[targetChainId];
+      if (!chainConfig) return;
+
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x' + targetChainId.toString(16) }]
+        });
+        currentChain = targetChainId;
+        updateWalletUI();
+      } catch (error) {
+        if (error.code === 4902) {
+          // Chain not added, try to add it
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x' + targetChainId.toString(16),
+                chainName: chainConfig.name,
+                rpcUrls: [chainConfig.rpcUrl],
+                blockExplorerUrls: [chainConfig.explorer]
+              }]
+            });
+            currentChain = targetChainId;
+            updateWalletUI();
+          } catch (addError) {
+            showError('Failed to add network: ' + addError.message);
+          }
+        } else {
+          showError('Failed to switch network: ' + error.message);
+        }
+      }
+    }
+
+    function updateWalletUI() {
+      if (walletConnected) {
+        elements.walletTitle.textContent = 'Wallet Connected';
+        elements.walletAddress.innerHTML = `<span class="address">${truncateAddress(userAddress)}</span>`;
+        elements.networkInfo.classList.remove('hidden');
+        elements.networkName.textContent = CHAINS[currentChain]?.name || `Chain ${currentChain}`;
+      }
+    }
+
+    async function approveTokens() {
+      // In a full implementation, this would approve the USDC spending
+      // For now, we'll skip this step
+      elements.approvalSection.classList.add('hidden');
+    }
+
+    async function createEscrow() {
+      try {
+        elements.payBtn.disabled = true;
+        showStatus('loading', 'Creating Escrow...', 'Please confirm the transaction in your wallet');
+
+        const { totalUSD, cart } = checkoutData;
+        const amountInUnits = BigInt(Math.floor(totalUSD * 1e6)); // USDC has 6 decimals
+
+        // Create order title from cart items
+        const orderTitle = 'Amazon Order: ' + cart.map(i => 
+          `${i.quantity}x ${i.title.substring(0, 30)}`
+        ).join(', ').substring(0, 200);
+
+        // In a real implementation, this would use the Palindrome Pay SDK:
+        // 
+        // const sdk = new PalindromePaySDK({
+        //   publicClient,
+        //   walletClient,
+        //   contractAddress: ESCROW_CONTRACT_ADDRESS,
+        //   apolloClient,
+        //   chain: currentChain
+        // });
+        //
+        // const result = await sdk.createEscrowAndDeposit(walletClient, {
+        //   token: settings.tokenAddress,
+        //   seller: settings.sellerAddress,
+        //   amount: amountInUnits,
+        //   maturityTimeDays: BigInt(settings.maturityDays || 7),
+        //   arbiter: settings.arbiterAddress || undefined,
+        //   title: orderTitle,
+        //   ipfsHash: ''
+        // });
+
+        // Simulated transaction for demo
+        await simulateTransaction();
+
+        // Success!
+        updateSteps(3);
+        showStatus('success', 'Payment Successful!', 
+          'Your escrow has been created. The seller will be notified.');
+        
+        // Clear the cart
+        await chrome.storage.local.set({ cart: [] });
+        await chrome.storage.local.remove('pendingCheckout');
+
+      } catch (error) {
+        showStatus('error', 'Transaction Failed', error.message);
+        elements.payBtn.disabled = false;
+      }
+    }
+
+    async function simulateTransaction() {
+      // Simulate wallet confirmation delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate transaction processing
+      showStatus('loading', 'Processing...', 'Waiting for transaction confirmation');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Show fake transaction hash
+      const fakeHash = '0x' + Array(64).fill(0).map(() => 
+        Math.floor(Math.random() * 16).toString(16)
+      ).join('');
+      
+      elements.txHashSection.classList.remove('hidden');
+      const explorer = CHAINS[currentChain]?.explorer || 'https://basescan.org';
+      elements.txHashLink.href = `${explorer}/tx/${fakeHash}`;
+      elements.txHashLink.textContent = truncateAddress(fakeHash);
+    }
+
+    function showStatus(type, title, details) {
+      elements.statusCard.classList.remove('hidden');
+      elements.statusIcon.className = 'status-icon ' + type;
+      
+      if (type === 'success') {
+        elements.statusIcon.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+      } else if (type === 'error') {
+        elements.statusIcon.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        `;
+      }
+
+      elements.statusText.textContent = title;
+      elements.statusDetails.textContent = details;
+    }
+
+    function showError(message) {
+      elements.errorMessage.textContent = message;
+      elements.errorMessage.classList.remove('hidden');
+    }
+
+    function updateSteps(currentStep) {
+      [1, 2, 3].forEach(step => {
+        const el = elements[`step${step}`];
+        el.classList.remove('active', 'completed');
+        if (step < currentStep) {
+          el.classList.add('completed');
+          el.innerHTML = '✓';
+        } else if (step === currentStep) {
+          el.classList.add('active');
+        }
+      });
+
+      if (currentStep > 1) elements.line1.classList.add('completed');
+      if (currentStep > 2) elements.line2.classList.add('completed');
+    }
+
+    function truncateAddress(address) {
+      if (!address) return '';
+      return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Start
+    init();
+  </script>
+</body>
+</html>

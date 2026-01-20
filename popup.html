@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Crypto Cart</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <span>Crypto Cart</span>
+      </div>
+      <div class="header-actions">
+        <button id="settingsBtn" class="icon-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button id="clearCartBtn" class="icon-btn danger" title="Clear Cart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="cart">
+        <span>Cart</span>
+        <span class="badge" id="cartBadge">0</span>
+      </button>
+      <button class="tab" data-tab="checkout">Checkout</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- Cart Tab -->
+    <section id="cartTab" class="tab-content active">
+      <div id="emptyCart" class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="9" cy="21" r="1"></circle>
+          <circle cx="20" cy="21" r="1"></circle>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+        </svg>
+        <p>Your cart is empty</p>
+        <span>Browse Amazon and click "Add to My Cart" to get started</span>
+      </div>
+      
+      <div id="cartItems" class="cart-items"></div>
+      
+      <div id="cartSummary" class="cart-summary hidden">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="subtotal">$0.00</span>
+        </div>
+        <div class="summary-row total">
+          <span>Total (USD)</span>
+          <span id="totalPrice">$0.00</span>
+        </div>
+        <button id="proceedCheckout" class="btn primary full-width">
+          Proceed to Crypto Checkout
+        </button>
+      </div>
+    </section>
+
+    <!-- Checkout Tab -->
+    <section id="checkoutTab" class="tab-content">
+      <div class="checkout-section">
+        <h3>Payment Summary</h3>
+        <div id="checkoutItems" class="checkout-items"></div>
+        
+        <div class="checkout-total">
+          <div class="summary-row">
+            <span>Subtotal (USD)</span>
+            <span id="checkoutTotal">$0.00</span>
+          </div>
+          <div class="summary-row">
+            <span>Shipping (Standard Delivery)</span>
+            <span>$5.99</span>
+          </div>
+          <div class="summary-row crypto">
+            <span>Amount in USDT</span>
+            <span id="cryptoAmount">0 USDT</span>
+          </div>
+          <div class="summary-row fee">
+            <span>Escrow Fee (1%)</span>
+            <span id="escrowFee">0 USDT</span>
+          </div>
+        </div>
+
+        <div class="escrow-info">
+          <h4>Escrow Protection</h4>
+          <ul>
+            <li>✓ Funds held securely until delivery confirmed</li>
+            <li>✓ Dispute resolution available</li>
+            <li>✓ 14 days maturity period</li>
+            <li>✓ Buyer can withdraw funds after maturity time</li>
+          </ul>
+        </div>
+
+        <button id="payWithCrypto" class="btn primary full-width">
+          <img src="logoPalindromePay.png" alt="Palindrome Pay" style="height: 32px; width: auto; vertical-align: middle;" />
+        </button>
+        <p class="checkout-note">Wallet connection will open on the Amazon page</p>
+        
+        <div id="txStatus" class="tx-status hidden">
+          <div class="spinner"></div>
+          <span id="txStatusText">Processing...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Tab -->
+    <section id="settingsTab" class="tab-content">
+      <div class="settings-section">
+        <h3>Payment Settings</h3>
+        
+        <div class="form-group">
+          <label for="sellerAddress">Seller Wallet Address</label>
+          <input type="text" id="sellerAddress" placeholder="0x..." />
+          <small>The merchant's wallet to receive payments</small>
+        </div>
+
+        <div class="form-group">
+          <label for="tokenAddress">Payment Token (USDC)</label>
+          <input type="text" id="tokenAddress" placeholder="0x..." />
+          <small>USDC contract address on your chain</small>
+        </div>
+
+        <div class="form-group">
+          <label for="arbiterAddress">Arbiter Address (Optional)</label>
+          <input type="text" id="arbiterAddress" placeholder="0x..." />
+          <small>For dispute resolution. Leave empty for default.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="maturityDays">Escrow Maturity (Days)</label>
+          <input type="number" id="maturityDays" min="1" max="365" value="7" />
+          <small>Days before auto-release to seller</small>
+        </div>
+
+        <div class="form-group">
+          <label for="chainSelect">Blockchain Network</label>
+          <select id="chainSelect">
+            <option value="8453">Base Mainnet</option>
+            <option value="84532">Base Sepolia (Testnet)</option>
+            <option value="1">Ethereum Mainnet</option>
+            <option value="11155111">Sepolia (Testnet)</option>
+            <option value="137">Polygon</option>
+            <option value="42161">Arbitrum One</option>
+          </select>
+        </div>
+
+        <button id="saveSettings" class="btn primary full-width">
+          Save Settings
+        </button>
+
+        <div id="settingsStatus" class="settings-status hidden"></div>
+      </div>
+
+      <div class="settings-section">
+        <h3>Quick Setup</h3>
+        <p class="info-text">
+          Use these preset configurations for common networks:
+        </p>
+        <div class="preset-buttons">
+          <button class="preset-btn" data-preset="base">
+            Base (USDC)
+          </button>
+          <button class="preset-btn" data-preset="base-testnet">
+            Base Sepolia (Test)
+          </button>
+          <button class="preset-btn" data-preset="polygon">
+            Polygon (USDC)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span class="powered-by-text">Powered by</span>
+      <img src="palindromepay-crypto-escrow-payment.png" alt="Palindrome Pay" class="footer-logo" />
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

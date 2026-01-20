@@ -1,0 +1,118 @@
+/* content-styles.css - Styles for the injected custom cart button */
+
+#custom-cart-btn-container {
+  margin: 4px 0;
+  padding: 0;
+}
+
+.custom-cart-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0F1111;
+  background: #FFD814;
+  border: 1px solid #FCD200;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.custom-cart-btn:hover {
+  background: #F7CA00;
+}
+
+.custom-cart-btn:active {
+  background: #F0C14B;
+}
+
+.custom-cart-btn.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.custom-cart-btn.loading .cart-icon {
+  animation: pulse 1s infinite;
+}
+
+.custom-cart-btn.success {
+  background: linear-gradient(135deg, #a8e6cf 0%, #88d8b0 100%);
+  color: #1a5a3a;
+}
+
+.cart-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.btn-text {
+  white-space: nowrap;
+}
+
+.feedback-message {
+  display: none;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.feedback-message.success {
+  background: rgba(255, 255, 255, 0.9);
+  color: #10b981;
+}
+
+.feedback-message.error {
+  background: rgba(255, 255, 255, 0.9);
+  color: #ef4444;
+}
+
+.powered-by-logo {
+  height: 20px;
+  width: auto;
+  vertical-align: middle;
+}
+
+.powered-by {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #565959;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.powered-by-brand-logo {
+  height: 18px;
+  width: auto;
+  vertical-align: middle;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .custom-cart-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+}

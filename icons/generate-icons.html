@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Icons</title>
+</head>
+<body>
+  <p>Open this file in a browser and right-click to save the canvases as PNGs</p>
+  <canvas id="c16" width="16" height="16"></canvas>
+  <canvas id="c32" width="32" height="32"></canvas>
+  <canvas id="c48" width="48" height="48"></canvas>
+  <canvas id="c128" width="128" height="128"></canvas>
+  
+  <script>
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      const scale = size / 128;
+      
+      // Background gradient
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      grad.addColorStop(0, '#667eea');
+      grad.addColorStop(1, '#764ba2');
+      
+      // Rounded rect
+      const radius = 24 * scale;
+      ctx.beginPath();
+      ctx.moveTo(radius, 0);
+      ctx.lineTo(size - radius, 0);
+      ctx.quadraticCurveTo(size, 0, size, radius);
+      ctx.lineTo(size, size - radius);
+      ctx.quadraticCurveTo(size, size, size - radius, size);
+      ctx.lineTo(radius, size);
+      ctx.quadraticCurveTo(0, size, 0, size - radius);
+      ctx.lineTo(0, radius);
+      ctx.quadraticCurveTo(0, 0, radius, 0);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      
+      // Cart icon
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 6 * scale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // Wheels
+      ctx.beginPath();
+      ctx.arc(52 * scale, 100 * scale, 6 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(92 * scale, 100 * scale, 6 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Cart body
+      ctx.beginPath();
+      ctx.moveTo(20 * scale, 28 * scale);
+      ctx.lineTo(36 * scale, 28 * scale);
+      ctx.lineTo(48 * scale, 80 * scale);
+      ctx.lineTo(104 * scale, 80 * scale);
+      ctx.lineTo(116 * scale, 44 * scale);
+      ctx.lineTo(52 * scale, 44 * scale);
+      ctx.stroke();
+      
+      // Dollar badge
+      ctx.fillStyle = '#fcb69f';
+      ctx.beginPath();
+      ctx.arc(96 * scale, 36 * scale, 16 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#1a1a2e';
+      ctx.font = `bold ${18 * scale}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', 96 * scale, 38 * scale);
+    }
+    
+    ['c16', 'c32', 'c48', 'c128'].forEach(id => {
+      drawIcon(document.getElementById(id));
+    });
+  </script>
+</body>
+</html>
