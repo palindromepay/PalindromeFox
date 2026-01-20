@@ -32,8 +32,17 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["logoPalindromePay.png", "palindromepay-crypto-escrow-payment.png", "injected.js"],
+      "resources": [
+        "logoPalindromePay.png",
+        "palindromepay-crypto-escrow-payment.png",
+        "injected.js",
+        "dist/*",
+        "checkout.html"
+      ],
       "matches": ["https://www.amazon.com/*", "https://amazon.com/*"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

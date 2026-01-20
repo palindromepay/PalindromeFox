@@ -46,11 +46,26 @@
       }
     }
 
-    // Get ASIN (Amazon product ID)
-    const asinElement = document.querySelector('[data-asin]') ||
-                        document.querySelector('input[name="ASIN"]');
-    const asin = asinElement ? (asinElement.dataset.asin || asinElement.value) : 
-                 window.location.pathname.match(/\/dp\/([A-Z0-9]{10})/)?.[1] || '';
+    // Get ASIN (Amazon product ID) - prioritize URL extraction for accuracy
+    let asin = '';
+    // First try to get from URL (most reliable)
+    const urlMatch = window.location.pathname.match(/\/dp\/([A-Z0-9]{10})/);
+    if (urlMatch) {
+      asin = urlMatch[1];
+    } else {
+      // Fallback to hidden input or data attribute
+      const asinInput = document.querySelector('input[name="ASIN"]');
+      if (asinInput) {
+        asin = asinInput.value;
+      } else {
+        // Last resort: get from main product container (not recommendations)
+        const mainProduct = document.querySelector('#dp-container [data-asin]') ||
+                           document.querySelector('#ppd [data-asin]');
+        if (mainProduct && mainProduct.dataset.asin) {
+          asin = mainProduct.dataset.asin;
+        }
+      }
+    }
 
     // Get product URL
     const productUrl = window.location.href.split('?')[0];
@@ -198,14 +213,68 @@
     subtree: true
   });
 
-  // Listen for messages from popup to open checkout modal
+  // Listen for messages from popup to open checkout
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'openCheckoutModal') {
-      openCheckoutModal(request.checkoutData);
+      // Skip modal - go directly to Palindrome Pay
+      openPalindromePayCheckout(request.checkoutData);
       sendResponse({ success: true });
     }
     return true;
   });
+
+  // Open Palindrome Pay hosted checkout directly
+  async function openPalindromePayCheckout(checkoutData) {
+    const { cart, totalUSD } = checkoutData;
+
+    // Get config from background
+    const configResponse = await chrome.runtime.sendMessage({ action: 'getConfig' });
+    const config = configResponse.config || {};
+
+    const sellerAddress = config.sellerAddress || '0x9Ca3100BfD6A2b00b9a6ED3Fc90F44617Bc8839C';
+    const tokenAddress = config.tokenAddress || '0xf8a8519313befc293bbe86fd40e993655cf7436b';
+    const checkoutBaseUrl = config.checkoutUrl || 'http://localhost:3000/crypto-pay';
+    const escrowFeePercent = config.escrowFeePercent || 0.01;
+
+    const fee = totalUSD * escrowFeePercent;
+    const total = totalUSD + fee;
+
+    // Build order title from cart (short version for display)
+    const orderTitle = cart.length > 0
+      ? 'Amazon Order: ' + cart.map(i => `${i.quantity}x ${i.title.substring(0, 30)}`).join(', ').substring(0, 200)
+      : 'Amazon Order';
+
+    // Prepare cart items for JSON (compact format)
+    const items = cart.map(item => ({
+      title: item.title,
+      qty: item.quantity,
+      price: item.price,
+      asin: item.asin,
+      img: item.imageUrl,
+      url: item.productUrl
+    }));
+
+    // Build Palindrome Pay URL with parameters
+    const params = new URLSearchParams({
+      seller: sellerAddress,
+      amount: total.toFixed(2),
+      title: orderTitle,
+      token: tokenAddress,
+      redirect: window.location.href,
+      source: 'addonShopping'
+    });
+
+    // Add items as JSON (URL encoded automatically by URLSearchParams)
+    params.set('items', JSON.stringify(items));
+
+    // Open Palindrome Pay hosted checkout
+    const checkoutUrl = `${checkoutBaseUrl}?${params.toString()}`;
+    console.log('Opening Palindrome Pay:', checkoutUrl);
+    window.open(checkoutUrl, '_blank');
+
+    // Clear cart after redirecting
+    chrome.runtime.sendMessage({ action: 'clearCart' });
+  }
 
   // Checkout Modal Implementation
   function openCheckoutModal(checkoutData) {
@@ -573,34 +642,66 @@
     // Connect wallet button
     document.getElementById('pp-connect-wallet').addEventListener('click', triggerWalletConnect);
 
-    // Pay button
-    document.getElementById('pp-pay-btn').addEventListener('click', () => {
+    // Pay button - Open Palindrome Pay hosted checkout
+    document.getElementById('pp-pay-btn').addEventListener('click', async () => {
       const payBtn = document.getElementById('pp-pay-btn');
       const statusEl = document.getElementById('pp-status-message');
       const modalEl = document.getElementById('palindrome-checkout-modal');
 
-      // Get seller address from data attribute
+      // Get checkout data from modal
       const sellerAddr = modalEl.dataset.seller;
-      console.log('Sending transaction to:', sellerAddr);
+      const tokenAddr = modalEl.dataset.token;
+      const totalUSD = parseFloat(modalEl.dataset.amount) || 0;
+
+      console.log('Opening Palindrome Pay checkout:', { sellerAddr, tokenAddr, totalUSD });
 
       if (!sellerAddr) {
-        statusEl.textContent = 'Error: Seller address not found';
+        statusEl.textContent = 'Error: Seller address not configured';
         statusEl.className = 'pp-status-message error';
         return;
       }
 
       payBtn.disabled = true;
-      payBtn.textContent = 'Processing...';
-      statusEl.textContent = 'Please confirm the transaction in your wallet...';
+      payBtn.textContent = 'Opening checkout...';
+      statusEl.textContent = 'Redirecting to Palindrome Pay...';
       statusEl.className = 'pp-status-message info';
 
-      // Send transaction request to injected script
-      window.postMessage({
-        type: 'PP_TX_REQUEST',
-        to: sellerAddr,
-        value: '0x0',
-        data: '0x'
-      }, '*');
+      try {
+        // Get cart data for title
+        const cartResponse = await chrome.runtime.sendMessage({ action: 'getCart' });
+        const cart = cartResponse.cart || [];
+
+        // Build order title from cart
+        const orderTitle = cart.length > 0
+          ? 'Amazon Order: ' + cart.map(i => `${i.quantity}x ${i.title.substring(0, 30)}`).join(', ').substring(0, 200)
+          : 'Amazon Order';
+
+        // Close modal
+        modalEl.remove();
+
+        // Build Palindrome Pay URL with parameters
+        const params = new URLSearchParams({
+          seller: sellerAddr,
+          amount: totalUSD.toFixed(2),
+          title: orderTitle,
+          token: tokenAddr,
+          redirect: window.location.href
+        });
+
+        // Open Palindrome Pay hosted checkout
+        const checkoutUrl = `https://palindromepay.com/crypto-pay?${params.toString()}`;
+        window.open(checkoutUrl, '_blank');
+
+        // Clear cart after redirecting
+        chrome.runtime.sendMessage({ action: 'clearCart' });
+
+      } catch (error) {
+        console.error('Error opening checkout:', error);
+        statusEl.textContent = 'Error: ' + error.message;
+        statusEl.className = 'pp-status-message error';
+        payBtn.disabled = false;
+        payBtn.textContent = 'Pay with Crypto';
+      }
     });
   }
 

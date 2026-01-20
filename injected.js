@@ -1,5 +1,11 @@
 // injected.js - Runs in page context to access MetaMask
 
+// Prevent duplicate injection
+if (window.__ppInjected) {
+  console.log('PP: Script already injected, skipping...');
+} else {
+  window.__ppInjected = true;
+
 let connectedAddress = null;
 
 window.ppConnectWallet = async function() {
@@ -63,3 +69,5 @@ window.addEventListener('message', (event) => {
 
 // Signal that script is ready
 window.postMessage({ type: 'PP_SCRIPT_READY' }, '*');
+
+} // End of duplicate injection guard

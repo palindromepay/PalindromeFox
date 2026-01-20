@@ -5,9 +5,7 @@
 // ============================================================================
 
 let cart = [];
-let settings = {};
-let walletConnected = false;
-let userAddress = null;
+let config = {};
 
 // ============================================================================
 // INITIALIZATION
@@ -15,7 +13,7 @@ let userAddress = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadCart();
-  await loadSettings();
+  await loadConfig();
   setupEventListeners();
   renderCart();
 });
@@ -27,11 +25,10 @@ async function loadCart() {
   }
 }
 
-async function loadSettings() {
-  const response = await chrome.runtime.sendMessage({ action: 'getSettings' });
+async function loadConfig() {
+  const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
   if (response.success) {
-    settings = response.settings;
-    populateSettingsForm();
+    config = response.config;
   }
 }
 
@@ -51,15 +48,6 @@ function setupEventListeners() {
 
   // Checkout actions
   document.getElementById('payWithCrypto').addEventListener('click', initiatePayment);
-
-  // Settings actions
-  document.getElementById('saveSettings').addEventListener('click', saveSettings);
-  document.getElementById('settingsBtn').addEventListener('click', () => switchTab('settings'));
-
-  // Preset buttons
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
-  });
 }
 
 // ============================================================================
@@ -241,28 +229,6 @@ function renderCheckout() {
   document.getElementById('cryptoAmount').textContent = `${usdtAmount.toFixed(2)} USDT`;
   document.getElementById('escrowFee').textContent = `${fee.toFixed(2)} USDT`;
 
-  // Update wallet status
-  updateWalletUI();
-}
-
-// ============================================================================
-// WALLET CONNECTION
-// ============================================================================
-
-async function connectWallet() {
-  // Extension popups cannot access window.ethereum (MetaMask)
-  // Wallet connection happens in the checkout modal on the Amazon page
-  // This button now just initiates the checkout flow
-  initiatePayment();
-}
-
-function updateWalletUI() {
-  const payBtn = document.getElementById('payWithCrypto');
-
-  // Enable pay button if cart has items and seller is configured
-  if (payBtn) {
-    payBtn.disabled = cart.length === 0 || !settings.sellerAddress;
-  }
 }
 
 // ============================================================================
@@ -274,16 +240,9 @@ async function initiatePayment() {
   const txStatusEl = document.getElementById('txStatus');
   const txStatusTextEl = document.getElementById('txStatusText');
 
-  // Validate settings
-  if (!settings.sellerAddress) {
-    alert('Please configure the seller wallet address in Settings first.');
-    switchTab('settings');
-    return;
-  }
-
-  if (!settings.tokenAddress) {
-    alert('Please configure the payment token address in Settings first.');
-    switchTab('settings');
+  // Validate cart
+  if (cart.length === 0) {
+    showToast('Your cart is empty.', 'error');
     return;
   }
 
@@ -293,7 +252,7 @@ async function initiatePayment() {
     txStatusTextEl.textContent = 'Preparing transaction...';
 
     const subtotal = calculateTotal();
-    const shippingFee = 5.99; // Standard delivery fee
+    const shippingFee = config.shippingFee || 5.99;
     const total = subtotal + shippingFee;
 
     // Create order summary for IPFS/title
@@ -301,15 +260,11 @@ async function initiatePayment() {
       `${item.quantity}x ${truncate(item.title, 50)}`
     ).join('; ');
 
-    // Build checkout data (use strings for BigInt values to allow serialization)
+    // Build checkout data
     const checkoutData = {
-      token: settings.tokenAddress,
-      seller: settings.sellerAddress,
-      amount: parseUnits(total.toString(), 6).toString(), // Convert BigInt to string - includes shipping
-      maturityTimeDays: settings.maturityDays || 14,
-      arbiter: settings.arbiterAddress || '',
+      token: config.tokenAddress,
+      seller: config.sellerAddress,
       title: `Amazon Order: ${truncate(orderSummary, 200)}`,
-      ipfsHash: '',
       cart: cart,
       totalUSD: total,
       shippingFee: shippingFee,
@@ -371,86 +326,30 @@ function parseUnits(value, decimals) {
 }
 
 // ============================================================================
-// SETTINGS
+// TOAST NOTIFICATIONS
 // ============================================================================
 
-function populateSettingsForm() {
-  document.getElementById('sellerAddress').value = settings.sellerAddress || '';
-  document.getElementById('tokenAddress').value = settings.tokenAddress || '';
-  document.getElementById('arbiterAddress').value = settings.arbiterAddress || '';
-  document.getElementById('maturityDays').value = settings.maturityDays || 7;
-  document.getElementById('chainSelect').value = settings.chainId || '8453';
-}
+function showToast(message, type = 'info', duration = 4000) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
 
-async function saveSettings() {
-  const statusEl = document.getElementById('settingsStatus');
-  
-  const newSettings = {
-    sellerAddress: document.getElementById('sellerAddress').value.trim(),
-    tokenAddress: document.getElementById('tokenAddress').value.trim(),
-    arbiterAddress: document.getElementById('arbiterAddress').value.trim(),
-    maturityDays: parseInt(document.getElementById('maturityDays').value) || 7,
-    chainId: parseInt(document.getElementById('chainSelect').value)
+  // Icon based on type
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
   };
 
-  // Validate addresses
-  if (newSettings.sellerAddress && !isValidAddress(newSettings.sellerAddress)) {
-    showSettingsStatus('Invalid seller address', 'error');
-    return;
-  }
+  toast.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+  container.appendChild(toast);
 
-  if (newSettings.tokenAddress && !isValidAddress(newSettings.tokenAddress)) {
-    showSettingsStatus('Invalid token address', 'error');
-    return;
-  }
-
-  const response = await chrome.runtime.sendMessage({
-    action: 'saveSettings',
-    settings: newSettings
-  });
-
-  if (response.success) {
-    settings = newSettings;
-    showSettingsStatus('Settings saved successfully!', 'success');
-    updateWalletUI();
-  } else {
-    showSettingsStatus('Failed to save settings', 'error');
-  }
-}
-
-function showSettingsStatus(message, type) {
-  const statusEl = document.getElementById('settingsStatus');
-  statusEl.textContent = message;
-  statusEl.className = `settings-status ${type}`;
-  statusEl.classList.remove('hidden');
-  
+  // Auto remove after duration
   setTimeout(() => {
-    statusEl.classList.add('hidden');
-  }, 3000);
-}
-
-function applyPreset(preset) {
-  const presets = {
-    'base': {
-      chainId: 8453,
-      tokenAddress: '0xf8a8519313befc293bbe86fd40e993655cf7436b', // USDT on Base
-    },
-    'base-testnet': {
-      chainId: 84532,
-      tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // Test token on Base Sepolia
-    },
-    'polygon': {
-      chainId: 137,
-      tokenAddress: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', // USDT on Polygon
-    },
-  };
-
-  const preset_data = presets[preset];
-  if (preset_data) {
-    document.getElementById('chainSelect').value = preset_data.chainId;
-    document.getElementById('tokenAddress').value = preset_data.tokenAddress;
-    showSettingsStatus(`Applied ${preset} preset. Don't forget to save!`, 'success');
-  }
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
 }
 
 // ============================================================================

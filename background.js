@@ -1,16 +1,12 @@
 // background.js - Service worker for cart management
 
+// Import config
+importScripts('config.js');
+
 // Initialize cart storage
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
-    cart: [],
-    settings: {
-      sellerAddress: '0x9Ca3100BfD6A2b00b9a6ED3Fc90F44617Bc8839C', // Seller's wallet address
-      arbiterAddress: '', // Optional arbiter address
-      tokenAddress: '0xf8a8519313befc293bbe86fd40e993655cf7436b', // USDT contract address on Base
-      maturityDays: 7, // Default escrow maturity
-      chainId: 8453 // Base mainnet by default
-    }
+    cart: []
   });
 });
 
@@ -41,20 +37,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  if (request.action === 'getSettings') {
-    getSettings().then(sendResponse);
+  if (request.action === 'getConfig') {
+    sendResponse({ success: true, config: CONFIG });
     return true;
   }
-  
-  if (request.action === 'saveSettings') {
-    saveSettings(request.settings).then(sendResponse);
+
+  if (request.action === 'openCheckout') {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('checkout.html')
+    });
+    sendResponse({ success: true });
     return true;
   }
 });
 
 async function addToCart(product) {
   try {
-    const { cart } = await chrome.storage.local.get('cart');
+    const result = await chrome.storage.local.get('cart');
+    const cart = result.cart || []; // Initialize as empty array if undefined
     const existingIndex = cart.findIndex(p => p.asin === product.asin);
     
     if (existingIndex >= 0) {
@@ -124,24 +124,6 @@ async function clearCart() {
   try {
     await chrome.storage.local.set({ cart: [] });
     updateBadge(0);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-async function getSettings() {
-  try {
-    const { settings } = await chrome.storage.local.get('settings');
-    return { success: true, settings };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-async function saveSettings(newSettings) {
-  try {
-    await chrome.storage.local.set({ settings: newSettings });
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
