@@ -383,168 +383,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Checkout Section */
-.checkout-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.checkout-section h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.checkout-section h4 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-.checkout-items {
-  background: var(--bg);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-.checkout-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border);
-}
-
-.checkout-item:last-child {
-  border-bottom: none;
-}
-
-.checkout-item-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-right: 12px;
-}
-
-.checkout-total {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-}
-
-/* Wallet Section */
-.wallet-section {
-  background: var(--bg);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-}
-
-.wallet-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 13px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-}
-
-.wallet-status.connected .status-dot {
-  background: var(--success);
-}
-
-.wallet-status.connected .status-text {
-  color: var(--success);
-}
-
-/* Escrow Info */
-.escrow-info {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-}
-
-.escrow-info ul {
-  list-style: none;
-  font-size: 13px;
-}
-
-.escrow-info li {
-  padding: 4px 0;
-  color: var(--text);
-}
-
-.dashboard-link {
-  display: block;
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: var(--primary);
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.2s ease;
-}
-
-.dashboard-link:hover {
-  background: var(--primary-dark);
-}
-
-/* Transaction Status */
-.tx-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg);
-  border-radius: var(--radius-sm);
-  margin-top: 12px;
-}
-
-.tx-status.hidden {
-  display: none;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.tx-status.success {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-}
-
-.tx-status.error {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-}
-
 /* Settings */
 .settings-section {
   background: var(--bg-card);
@@ -613,6 +451,19 @@ body {
   font-size: 12px;
   color: var(--text-light);
   margin-bottom: 16px;
+}
+
+/* Email Form */
+.email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-error {
+  color: #dc3545;
+  font-size: 12px;
+  margin-bottom: 10px;
 }
 
 .info-text {

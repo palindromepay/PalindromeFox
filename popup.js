@@ -311,8 +311,6 @@ async function clearCart() {
 // ============================================================================
 
 async function initiatePayment() {
-  const payBtn = document.getElementById('payWithCrypto');
-
   // Validate cart
   if (cart.length === 0) {
     showToast('Your cart is empty.', 'error');
@@ -378,7 +376,13 @@ async function initiatePayment() {
 
     // Open checkout
     const checkoutUrl = `${checkoutBaseUrl}?${params.toString()}`;
-    chrome.tabs.create({ url: checkoutUrl });
+    try {
+      await chrome.tabs.create({ url: checkoutUrl });
+    } catch (tabError) {
+      console.error('Error opening checkout tab:', tabError);
+      showToast('Error opening checkout. Please try again.', 'error');
+      return;
+    }
 
     // Clear cart after opening checkout
     await chrome.runtime.sendMessage({ action: 'clearCart' });
