@@ -14,7 +14,7 @@ let config = {};
 document.addEventListener('DOMContentLoaded', async () => {
   await loadCart();
   await loadConfig();
-  await loadAddress();
+  await loadEmail();
   setupEventListeners();
   renderCart();
 });
@@ -33,18 +33,13 @@ async function loadConfig() {
   }
 }
 
-async function loadAddress() {
-  const response = await chrome.runtime.sendMessage({ action: 'getAddress' });
-  if (response.success && response.address) {
-    const addr = response.address;
-    document.getElementById('fullName').value = addr.fullName || '';
-    document.getElementById('street').value = addr.street || '';
-    document.getElementById('apt').value = addr.apt || '';
-    document.getElementById('city').value = addr.city || '';
-    document.getElementById('state').value = addr.state || '';
-    document.getElementById('zip').value = addr.zip || '';
-    document.getElementById('country').value = addr.country || 'USA';
-    document.getElementById('phone').value = addr.phone || '';
+async function loadEmail() {
+  const response = await chrome.runtime.sendMessage({ action: 'getEmail' });
+  if (response.success && response.email) {
+    const emailData = response.email;
+    document.getElementById('recipientName').value = emailData.recipientName || '';
+    document.getElementById('deliveryEmail').value = emailData.email || '';
+    document.getElementById('confirmEmail').value = emailData.email || '';
   }
 }
 
@@ -65,33 +60,42 @@ function setupEventListeners() {
   // Checkout actions
   document.getElementById('payWithCrypto').addEventListener('click', initiatePayment);
 
-  // Address form
-  document.getElementById('addressForm').addEventListener('submit', saveAddress);
+  // Email form
+  document.getElementById('emailForm').addEventListener('submit', saveEmail);
 }
 
-async function saveAddress(e) {
+async function saveEmail(e) {
   e.preventDefault();
 
-  const address = {
-    fullName: document.getElementById('fullName').value.trim(),
-    street: document.getElementById('street').value.trim(),
-    apt: document.getElementById('apt').value.trim(),
-    city: document.getElementById('city').value.trim(),
-    state: document.getElementById('state').value.trim(),
-    zip: document.getElementById('zip').value.trim(),
-    country: document.getElementById('country').value.trim(),
-    phone: document.getElementById('phone').value.trim()
+  const email = document.getElementById('deliveryEmail').value.trim();
+  const confirmEmail = document.getElementById('confirmEmail').value.trim();
+  const recipientName = document.getElementById('recipientName').value.trim();
+  const errorEl = document.getElementById('emailError');
+
+  // Validate emails match
+  if (email !== confirmEmail) {
+    errorEl.textContent = 'Email addresses do not match. Please check and try again.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  // Hide error if previously shown
+  errorEl.style.display = 'none';
+
+  const emailData = {
+    recipientName: recipientName,
+    email: email
   };
 
   const response = await chrome.runtime.sendMessage({
-    action: 'saveAddress',
-    address: address
+    action: 'saveEmail',
+    email: emailData
   });
 
   if (response.success) {
-    showToast('Address saved successfully!', 'success');
+    showToast('Email saved successfully!', 'success');
   } else {
-    showToast('Failed to save address', 'error');
+    showToast('Failed to save email', 'error');
   }
 }
 

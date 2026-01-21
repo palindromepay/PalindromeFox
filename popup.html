@@ -158,8 +158,13 @@
           </ul>
         </div>
 
-        <button id="payWithCrypto" class="btn primary full-width">
-          <img src="logoPalindromePay.png" alt="Palindrome Pay" style="height: 32px; width: auto; vertical-align: middle;" />
+        <div class="no-refund-notice" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 12px; text-align: center; margin-bottom: 12px; border: 1px solid #ffeeba;">
+          ⚠️ No returns and no refunds on Gift Cards.
+        </div>
+
+        <button id="payWithCrypto" class="btn full-width" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-weight: 600;">Pay with</span>
+          <img src="logoPalindromePay.png" alt="Palindrome Pay" style="height: 28px; width: auto; vertical-align: middle;" />
         </button>
         <p class="checkout-note">Wallet connection will open on the Amazon page</p>
         
@@ -173,53 +178,28 @@
     <!-- Settings Tab -->
     <section id="settingsTab" class="tab-content">
       <div class="settings-section">
-        <h3>Shipping Address</h3>
-        <p class="settings-note">Your address is saved locally and passed securely at checkout.</p>
+        <h3>Gift Card Delivery Email</h3>
+        <p class="settings-note">Your eGift card will be sent to this email address. Please enter it twice to confirm.</p>
 
-        <form id="addressForm" class="address-form">
+        <form id="emailForm" class="email-form">
           <div class="form-group">
-            <label for="fullName">Full Name *</label>
-            <input type="text" id="fullName" required placeholder="John Doe">
-          </div>
-
-          <div class="form-group">
-            <label for="street">Street Address *</label>
-            <input type="text" id="street" required placeholder="123 Main Street">
+            <label for="recipientName">Recipient Name *</label>
+            <input type="text" id="recipientName" required placeholder="John Doe">
           </div>
 
           <div class="form-group">
-            <label for="apt">Apt/Suite/Unit</label>
-            <input type="text" id="apt" placeholder="Apt 4B (optional)">
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="city">City *</label>
-              <input type="text" id="city" required placeholder="New York">
-            </div>
-            <div class="form-group">
-              <label for="state">State *</label>
-              <input type="text" id="state" required placeholder="NY">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="zip">ZIP Code *</label>
-              <input type="text" id="zip" required placeholder="10001">
-            </div>
-            <div class="form-group">
-              <label for="country">Country *</label>
-              <input type="text" id="country" required placeholder="USA" value="USA">
-            </div>
+            <label for="deliveryEmail">Email Address *</label>
+            <input type="email" id="deliveryEmail" required placeholder="john@example.com">
           </div>
 
           <div class="form-group">
-            <label for="phone">Phone Number *</label>
-            <input type="tel" id="phone" required placeholder="+1 (555) 123-4567">
+            <label for="confirmEmail">Confirm Email *</label>
+            <input type="email" id="confirmEmail" required placeholder="john@example.com">
           </div>
 
-          <button type="submit" class="btn primary full-width">Save Address</button>
+          <div id="emailError" class="form-error" style="display: none; color: #dc3545; font-size: 12px; margin-bottom: 10px;"></div>
+
+          <button type="submit" class="btn primary full-width">Save Email</button>
         </form>
       </div>
     </section>

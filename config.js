@@ -9,5 +9,5 @@ const CONFIG = {
   chainId: 8453, // Base mainnet
 
   // Checkout URL
-  checkoutUrl: 'https://www.palindromepay.com/crypto-pay'
+  checkoutUrl: 'http://localhost:3000/crypto-pay'
 };

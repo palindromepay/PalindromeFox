@@ -59,6 +59,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     saveAddress(request.address).then(sendResponse);
     return true;
   }
+
+  if (request.action === 'getEmail') {
+    getEmail().then(sendResponse);
+    return true;
+  }
+
+  if (request.action === 'saveEmail') {
+    saveEmail(request.email).then(sendResponse);
+    return true;
+  }
 });
 
 async function addToCart(product) {
@@ -158,6 +168,25 @@ async function getAddress() {
 async function saveAddress(address) {
   try {
     await chrome.storage.local.set({ shippingAddress: address });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Email storage functions for eGift cards
+async function getEmail() {
+  try {
+    const { deliveryEmail } = await chrome.storage.local.get('deliveryEmail');
+    return { success: true, email: deliveryEmail || null };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function saveEmail(email) {
+  try {
+    await chrome.storage.local.set({ deliveryEmail: email });
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
