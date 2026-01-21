@@ -49,6 +49,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
     return true;
   }
+
+  if (request.action === 'getAddress') {
+    getAddress().then(sendResponse);
+    return true;
+  }
+
+  if (request.action === 'saveAddress') {
+    saveAddress(request.address).then(sendResponse);
+    return true;
+  }
 });
 
 async function addToCart(product) {
@@ -133,4 +143,23 @@ async function clearCart() {
 function updateBadge(count) {
   chrome.action.setBadgeText({ text: count > 0 ? count.toString() : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#667eea' });
+}
+
+// Address storage functions
+async function getAddress() {
+  try {
+    const { shippingAddress } = await chrome.storage.local.get('shippingAddress');
+    return { success: true, address: shippingAddress || null };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function saveAddress(address) {
+  try {
+    await chrome.storage.local.set({ shippingAddress: address });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }

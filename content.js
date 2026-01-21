@@ -74,6 +74,9 @@
     const quantitySelect = document.getElementById('quantity');
     const quantity = quantitySelect ? parseInt(quantitySelect.value) || 1 : 1;
 
+    // Get delivery fee
+    const deliveryFee = extractDeliveryFee();
+
     return {
       title,
       imageUrl,
@@ -81,8 +84,33 @@
       asin,
       productUrl,
       quantity,
+      deliveryFee,
       addedAt: new Date().toISOString()
     };
+  }
+
+  // Extract delivery fee from Amazon product page
+  function extractDeliveryFee() {
+    const selectors = [
+      '#deliveryBlockMessage',
+      '#mir-layout-DELIVERY_BLOCK',
+      '[data-csa-c-delivery-price]',
+      '#delivery-message',
+      '.delivery-message'
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) {
+        const text = el.textContent || '';
+        // Check for FREE delivery
+        if (/free/i.test(text)) return 0;
+        // Extract price like "$5.99" or "5.99"
+        const match = text.match(/\$?([\d,]+\.?\d*)/);
+        if (match) return parseFloat(match[1].replace(',', ''));
+      }
+    }
+    return 0; // No delivery fee found = Free
   }
 
   // Create and inject the custom Add to Cart button
@@ -231,13 +259,17 @@
     const configResponse = await chrome.runtime.sendMessage({ action: 'getConfig' });
     const config = configResponse.config || {};
 
+    // Get saved shipping address
+    const addressResponse = await chrome.runtime.sendMessage({ action: 'getAddress' });
+    const shippingAddress = addressResponse.address || null;
+
     const sellerAddress = config.sellerAddress || '0x9Ca3100BfD6A2b00b9a6ED3Fc90F44617Bc8839C';
     const tokenAddress = config.tokenAddress || '0xf8a8519313befc293bbe86fd40e993655cf7436b';
     const checkoutBaseUrl = config.checkoutUrl || 'http://localhost:3000/crypto-pay';
-    const escrowFeePercent = config.escrowFeePercent || 0.01;
 
-    const fee = totalUSD * escrowFeePercent;
-    const total = totalUSD + fee;
+    // Calculate delivery fee from cart items (use max delivery fee)
+    const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
+    const total = totalUSD + deliveryFee;
 
     // Build order title from cart (short version for display)
     const orderTitle = cart.length > 0
@@ -251,7 +283,8 @@
       price: item.price,
       asin: item.asin,
       img: item.imageUrl,
-      url: item.productUrl
+      url: item.productUrl,
+      delivery: item.deliveryFee || 0
     }));
 
     // Build Palindrome Pay URL with parameters
@@ -261,11 +294,19 @@
       title: orderTitle,
       token: tokenAddress,
       redirect: window.location.href,
-      source: 'addonShopping'
+      source: 'commerce'
     });
 
     // Add items as JSON (URL encoded automatically by URLSearchParams)
     params.set('items', JSON.stringify(items));
+
+    // Add shipping address if saved
+    if (shippingAddress) {
+      params.set('address', JSON.stringify(shippingAddress));
+    }
+
+    // Add delivery fee
+    params.set('deliveryFee', deliveryFee.toFixed(2));
 
     // Open Palindrome Pay hosted checkout
     const checkoutUrl = `${checkoutBaseUrl}?${params.toString()}`;

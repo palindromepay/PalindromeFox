@@ -14,6 +14,7 @@ let config = {};
 document.addEventListener('DOMContentLoaded', async () => {
   await loadCart();
   await loadConfig();
+  await loadAddress();
   setupEventListeners();
   renderCart();
 });
@@ -29,6 +30,21 @@ async function loadConfig() {
   const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
   if (response.success) {
     config = response.config;
+  }
+}
+
+async function loadAddress() {
+  const response = await chrome.runtime.sendMessage({ action: 'getAddress' });
+  if (response.success && response.address) {
+    const addr = response.address;
+    document.getElementById('fullName').value = addr.fullName || '';
+    document.getElementById('street').value = addr.street || '';
+    document.getElementById('apt').value = addr.apt || '';
+    document.getElementById('city').value = addr.city || '';
+    document.getElementById('state').value = addr.state || '';
+    document.getElementById('zip').value = addr.zip || '';
+    document.getElementById('country').value = addr.country || 'USA';
+    document.getElementById('phone').value = addr.phone || '';
   }
 }
 
@@ -48,6 +64,35 @@ function setupEventListeners() {
 
   // Checkout actions
   document.getElementById('payWithCrypto').addEventListener('click', initiatePayment);
+
+  // Address form
+  document.getElementById('addressForm').addEventListener('submit', saveAddress);
+}
+
+async function saveAddress(e) {
+  e.preventDefault();
+
+  const address = {
+    fullName: document.getElementById('fullName').value.trim(),
+    street: document.getElementById('street').value.trim(),
+    apt: document.getElementById('apt').value.trim(),
+    city: document.getElementById('city').value.trim(),
+    state: document.getElementById('state').value.trim(),
+    zip: document.getElementById('zip').value.trim(),
+    country: document.getElementById('country').value.trim(),
+    phone: document.getElementById('phone').value.trim()
+  };
+
+  const response = await chrome.runtime.sendMessage({
+    action: 'saveAddress',
+    address: address
+  });
+
+  if (response.success) {
+    showToast('Address saved successfully!', 'success');
+  } else {
+    showToast('Failed to save address', 'error');
+  }
 }
 
 // ============================================================================
@@ -208,8 +253,10 @@ async function clearCart() {
 function renderCheckout() {
   const checkoutItemsEl = document.getElementById('checkoutItems');
   const subtotal = calculateTotal();
-  const shippingFee = 5.99; // Standard delivery fee
-  const total = subtotal + shippingFee;
+
+  // Get delivery fee from cart items (use max delivery fee)
+  const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
+  const total = subtotal + deliveryFee;
 
   // Render checkout items summary
   checkoutItemsEl.innerHTML = cart.map(item => `
@@ -222,13 +269,12 @@ function renderCheckout() {
   // Update totals
   document.getElementById('checkoutTotal').textContent = `$${subtotal.toFixed(2)}`;
 
-  // Convert to USDT (1:1 with USD for stablecoins) - includes shipping
-  const usdtAmount = total;
-  const fee = usdtAmount * 0.01; // 1% escrow fee
+  // Show delivery fee (Free if 0)
+  const deliveryDisplay = deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free';
+  document.getElementById('deliveryFee').textContent = deliveryDisplay;
 
-  document.getElementById('cryptoAmount').textContent = `${usdtAmount.toFixed(2)} USDT`;
-  document.getElementById('escrowFee').textContent = `${fee.toFixed(2)} USDT`;
-
+  // Convert to USDT (1:1 with USD for stablecoins)
+  document.getElementById('cryptoAmount').textContent = `${total.toFixed(2)} USDT`;
 }
 
 // ============================================================================
@@ -252,8 +298,9 @@ async function initiatePayment() {
     txStatusTextEl.textContent = 'Preparing transaction...';
 
     const subtotal = calculateTotal();
-    const shippingFee = config.shippingFee || 5.99;
-    const total = subtotal + shippingFee;
+    // Get delivery fee from cart items (use max delivery fee)
+    const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
+    const total = subtotal + deliveryFee;
 
     // Create order summary for IPFS/title
     const orderSummary = cart.map(item =>
@@ -267,7 +314,7 @@ async function initiatePayment() {
       title: `Amazon Order: ${truncate(orderSummary, 200)}`,
       cart: cart,
       totalUSD: total,
-      shippingFee: shippingFee,
+      deliveryFee: deliveryFee,
       timestamp: new Date().toISOString(),
     };
 

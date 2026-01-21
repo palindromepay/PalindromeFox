@@ -9,9 +9,5 @@ const CONFIG = {
   chainId: 8453, // Base mainnet
 
   // Checkout URL
-  checkoutUrl: 'https://www.palindromepay.com/crypto-pay',
-
-  // Fees
-  escrowFeePercent: 0.01, // 1%
-  shippingFee: 5.99
+  checkoutUrl: 'https://www.palindromepay.com/crypto-pay'
 };
