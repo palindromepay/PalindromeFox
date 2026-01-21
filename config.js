@@ -8,9 +8,8 @@ const CONFIG = {
   maturityDays: 7,
   chainId: 8453, // Base mainnet
 
-  // Checkout URL (change to production when ready)
-  checkoutUrl: 'http://localhost:3000/crypto-pay',
-  // checkoutUrl: 'https://www.palindromepay.com/crypto-pay',
+  // Checkout URL
+  checkoutUrl: 'https://www.palindromepay.com/crypto-pay',
 
   // Fees
   escrowFeePercent: 0.01, // 1%
