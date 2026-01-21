@@ -1,62 +1,42 @@
-// background.js - Service worker for cart management
+// background.js - Service worker for Palindrome Pay extension
 
 // Import config
 importScripts('config.js');
 
 // Initialize cart storage
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({
-    cart: []
-  });
+  chrome.storage.local.set({ cart: [] });
 });
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'addToCart') {
     addToCart(request.product).then(sendResponse);
-    return true; // Keep channel open for async response
+    return true;
   }
-  
+
   if (request.action === 'getCart') {
     getCart().then(sendResponse);
     return true;
   }
-  
+
   if (request.action === 'removeFromCart') {
     removeFromCart(request.productId).then(sendResponse);
     return true;
   }
-  
+
   if (request.action === 'updateQuantity') {
     updateQuantity(request.productId, request.quantity).then(sendResponse);
     return true;
   }
-  
+
   if (request.action === 'clearCart') {
     clearCart().then(sendResponse);
     return true;
   }
-  
+
   if (request.action === 'getConfig') {
     sendResponse({ success: true, config: CONFIG });
-    return true;
-  }
-
-  if (request.action === 'openCheckout') {
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('checkout.html')
-    });
-    sendResponse({ success: true });
-    return true;
-  }
-
-  if (request.action === 'getAddress') {
-    getAddress().then(sendResponse);
-    return true;
-  }
-
-  if (request.action === 'saveAddress') {
-    saveAddress(request.address).then(sendResponse);
     return true;
   }
 
@@ -71,26 +51,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// Cart functions
 async function addToCart(product) {
   try {
     const result = await chrome.storage.local.get('cart');
-    const cart = result.cart || []; // Initialize as empty array if undefined
+    const cart = result.cart || [];
     const existingIndex = cart.findIndex(p => p.asin === product.asin);
-    
+
     if (existingIndex >= 0) {
-      // Update quantity if product exists
       cart[existingIndex].quantity += product.quantity || 1;
     } else {
-      // Add new product with unique ID
       product.id = `${product.asin}-${Date.now()}`;
       cart.push(product);
     }
-    
+
     await chrome.storage.local.set({ cart });
-    
-    // Update badge
     updateBadge(cart.length);
-    
+
     return { success: true, cartCount: cart.length };
   } catch (error) {
     console.error('Error adding to cart:', error);
@@ -123,7 +100,7 @@ async function updateQuantity(productId, quantity) {
   try {
     const { cart } = await chrome.storage.local.get('cart');
     const index = cart.findIndex(p => p.id === productId);
-    
+
     if (index >= 0) {
       if (quantity <= 0) {
         cart.splice(index, 1);
@@ -131,7 +108,7 @@ async function updateQuantity(productId, quantity) {
         cart[index].quantity = quantity;
       }
     }
-    
+
     await chrome.storage.local.set({ cart });
     updateBadge(cart.length);
     return { success: true, cart };
@@ -155,26 +132,7 @@ function updateBadge(count) {
   chrome.action.setBadgeBackgroundColor({ color: '#667eea' });
 }
 
-// Address storage functions
-async function getAddress() {
-  try {
-    const { shippingAddress } = await chrome.storage.local.get('shippingAddress');
-    return { success: true, address: shippingAddress || null };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-async function saveAddress(address) {
-  try {
-    await chrome.storage.local.set({ shippingAddress: address });
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-// Email storage functions for eGift cards
+// Email storage functions
 async function getEmail() {
   try {
     const { deliveryEmail } = await chrome.storage.local.get('deliveryEmail');

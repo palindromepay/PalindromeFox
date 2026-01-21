@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Crypto Cart</title>
+  <title>Palindrome Pay</title>
   <link rel="stylesheet" href="popup.css">
   <style>
     /* Toast notification styles */
@@ -72,11 +72,9 @@
     <header class="header">
       <div class="logo">
         <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="9" cy="21" r="1"></circle>
-          <circle cx="20" cy="21" r="1"></circle>
-          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
         </svg>
-        <span>Crypto Cart</span>
+        <span>Palindrome Pay</span>
       </div>
       <div class="header-actions">
         <button id="clearCartBtn" class="icon-btn danger" title="Clear Cart">
@@ -94,7 +92,6 @@
         <span>Cart</span>
         <span class="badge" id="cartBadge">0</span>
       </button>
-      <button class="tab" data-tab="checkout">Checkout</button>
       <button class="tab" data-tab="settings">Settings</button>
     </nav>
 
@@ -107,71 +104,27 @@
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
         </svg>
         <p>Your cart is empty</p>
-        <span>Browse Amazon and click "Add to My Cart" to get started</span>
+        <span>Browse Amazon eGift cards and click "Pay with Palindrome Pay"</span>
       </div>
-      
+
       <div id="cartItems" class="cart-items"></div>
-      
+
       <div id="cartSummary" class="cart-summary hidden">
         <div class="summary-row">
           <span>Subtotal</span>
           <span id="subtotal">$0.00</span>
         </div>
+        <div class="summary-row">
+          <span>Delivery</span>
+          <span id="deliveryFee">Free</span>
+        </div>
         <div class="summary-row total">
           <span>Total (USD)</span>
           <span id="totalPrice">$0.00</span>
         </div>
-        <button id="proceedCheckout" class="btn primary full-width">
-          Proceed to Crypto Checkout
+        <button id="payWithCrypto" class="btn full-width" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; display: flex; align-items: center; justify-content: center; padding: 12px;">
+          <img src="logoPalindromePay.png" alt="Palindrome Pay" style="height: 24px; width: auto;" />
         </button>
-      </div>
-    </section>
-
-    <!-- Checkout Tab -->
-    <section id="checkoutTab" class="tab-content">
-      <div class="checkout-section">
-        <h3>Payment Summary</h3>
-        <div id="checkoutItems" class="checkout-items"></div>
-        
-        <div class="checkout-total">
-          <div class="summary-row">
-            <span>Subtotal (USD)</span>
-            <span id="checkoutTotal">$0.00</span>
-          </div>
-          <div class="summary-row">
-            <span>Delivery</span>
-            <span id="deliveryFee">Free</span>
-          </div>
-          <div class="summary-row crypto total">
-            <span>Total (USDT)</span>
-            <span id="cryptoAmount">0 USDT</span>
-          </div>
-        </div>
-
-        <div class="escrow-info">
-          <h4>Escrow Protection</h4>
-          <ul>
-            <li>✓ Funds held securely until delivery confirmed</li>
-            <li>✓ Dispute resolution available</li>
-            <li>✓ 14 days maturity period</li>
-            <li>✓ Buyer can withdraw funds after maturity time</li>
-          </ul>
-        </div>
-
-        <div class="no-refund-notice" style="background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; font-size: 12px; text-align: center; margin-bottom: 12px; border: 1px solid #ffeeba;">
-          ⚠️ No returns and no refunds on Gift Cards.
-        </div>
-
-        <button id="payWithCrypto" class="btn full-width" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          <span style="font-weight: 600;">Pay with</span>
-          <img src="logoPalindromePay.png" alt="Palindrome Pay" style="height: 28px; width: auto; vertical-align: middle;" />
-        </button>
-        <p class="checkout-note">Wallet connection will open on the Amazon page</p>
-        
-        <div id="txStatus" class="tx-status hidden">
-          <div class="spinner"></div>
-          <span id="txStatusText">Processing...</span>
-        </div>
       </div>
     </section>
 
@@ -201,6 +154,11 @@
 
           <button type="submit" class="btn primary full-width">Save Email</button>
         </form>
+
+        <div id="savedEmailDisplay" class="saved-email-display" style="display: none; margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+          <p style="margin: 0 0 4px 0; font-size: 12px; color: #166534; font-weight: 600;">Currently saved:</p>
+          <p style="margin: 0; font-size: 13px; color: #15803d;" id="savedEmailText"></p>
+        </div>
       </div>
     </section>
 

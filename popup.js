@@ -1,4 +1,4 @@
-// popup.js - Cart UI and Crypto Checkout Integration
+// popup.js - Cart UI and Palindrome Pay Integration
 
 // ============================================================================
 // STATE
@@ -20,26 +20,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadCart() {
-  const response = await chrome.runtime.sendMessage({ action: 'getCart' });
-  if (response.success) {
-    cart = response.cart;
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'getCart' });
+    if (response.success) {
+      cart = response.cart;
+    }
+  } catch (error) {
+    console.error('Error loading cart:', error);
+    cart = [];
   }
 }
 
 async function loadConfig() {
-  const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
-  if (response.success) {
-    config = response.config;
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'getConfig' });
+    if (response.success) {
+      config = response.config;
+    }
+  } catch (error) {
+    console.error('Error loading config:', error);
   }
 }
 
 async function loadEmail() {
-  const response = await chrome.runtime.sendMessage({ action: 'getEmail' });
-  if (response.success && response.email) {
-    const emailData = response.email;
-    document.getElementById('recipientName').value = emailData.recipientName || '';
-    document.getElementById('deliveryEmail').value = emailData.email || '';
-    document.getElementById('confirmEmail').value = emailData.email || '';
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'getEmail' });
+    if (response.success && response.email) {
+      const emailData = response.email;
+      document.getElementById('recipientName').value = emailData.recipientName || '';
+      document.getElementById('deliveryEmail').value = emailData.email || '';
+      document.getElementById('confirmEmail').value = emailData.email || '';
+
+      // Show saved email display
+      if (emailData.email) {
+        const savedDisplay = document.getElementById('savedEmailDisplay');
+        const savedText = document.getElementById('savedEmailText');
+        savedDisplay.style.display = 'block';
+        savedText.textContent = `${emailData.recipientName} - ${emailData.email}`;
+      }
+    }
+  } catch (error) {
+    console.error('Error loading email:', error);
   }
 }
 
@@ -55,9 +76,8 @@ function setupEventListeners() {
 
   // Cart actions
   document.getElementById('clearCartBtn').addEventListener('click', clearCart);
-  document.getElementById('proceedCheckout').addEventListener('click', () => switchTab('checkout'));
 
-  // Checkout actions
+  // Pay button
   document.getElementById('payWithCrypto').addEventListener('click', initiatePayment);
 
   // Email form
@@ -71,6 +91,20 @@ async function saveEmail(e) {
   const confirmEmail = document.getElementById('confirmEmail').value.trim();
   const recipientName = document.getElementById('recipientName').value.trim();
   const errorEl = document.getElementById('emailError');
+
+  // Validate recipient name
+  if (!recipientName) {
+    errorEl.textContent = 'Please enter a recipient name.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  // Validate email
+  if (!email) {
+    errorEl.textContent = 'Please enter an email address.';
+    errorEl.style.display = 'block';
+    return;
+  }
 
   // Validate emails match
   if (email !== confirmEmail) {
@@ -87,15 +121,26 @@ async function saveEmail(e) {
     email: email
   };
 
-  const response = await chrome.runtime.sendMessage({
-    action: 'saveEmail',
-    email: emailData
-  });
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'saveEmail',
+      email: emailData
+    });
 
-  if (response.success) {
-    showToast('Email saved successfully!', 'success');
-  } else {
-    showToast('Failed to save email', 'error');
+    if (response.success) {
+      showToast('Email saved successfully!', 'success');
+
+      // Update saved email display
+      const savedDisplay = document.getElementById('savedEmailDisplay');
+      const savedText = document.getElementById('savedEmailText');
+      savedDisplay.style.display = 'block';
+      savedText.textContent = `${recipientName} - ${email}`;
+    } else {
+      showToast('Failed to save email', 'error');
+    }
+  } catch (error) {
+    console.error('Error saving email:', error);
+    showToast('Failed to save email. Please try again.', 'error');
   }
 }
 
@@ -113,11 +158,6 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(content => {
     content.classList.toggle('active', content.id === `${tabName}Tab`);
   });
-
-  // Special handling for checkout tab
-  if (tabName === 'checkout') {
-    renderCheckout();
-  }
 }
 
 // ============================================================================
@@ -146,9 +186,9 @@ function renderCart() {
   // Render items
   cartItemsEl.innerHTML = cart.map(item => `
     <div class="cart-item" data-id="${item.id}">
-      <img 
-        class="cart-item-image" 
-        src="${item.imageUrl || 'icons/placeholder.png'}" 
+      <img
+        class="cart-item-image"
+        src="${item.imageUrl || 'icons/placeholder.png'}"
         alt="${escapeHtml(item.title)}"
         onerror="this.src='icons/placeholder.png'"
       />
@@ -185,8 +225,12 @@ function renderCart() {
   });
 
   // Update summary
-  const total = calculateTotal();
-  document.getElementById('subtotal').textContent = `$${total.toFixed(2)}`;
+  const subtotal = calculateTotal();
+  const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
+  const total = subtotal + deliveryFee;
+
+  document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+  document.getElementById('deliveryFee').textContent = deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free';
   document.getElementById('totalPrice').textContent = `$${total.toFixed(2)}`;
 }
 
@@ -215,80 +259,59 @@ async function updateQuantity(productId, delta) {
   if (!item) return;
 
   const newQuantity = item.quantity + delta;
-  
-  const response = await chrome.runtime.sendMessage({
-    action: 'updateQuantity',
-    productId,
-    quantity: newQuantity
-  });
 
-  if (response.success) {
-    cart = response.cart;
-    renderCart();
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'updateQuantity',
+      productId,
+      quantity: newQuantity
+    });
+
+    if (response.success) {
+      cart = response.cart;
+      renderCart();
+    }
+  } catch (error) {
+    console.error('Error updating quantity:', error);
   }
 }
 
 async function removeFromCart(productId) {
-  const response = await chrome.runtime.sendMessage({
-    action: 'removeFromCart',
-    productId
-  });
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'removeFromCart',
+      productId
+    });
 
-  if (response.success) {
-    cart = response.cart;
-    renderCart();
+    if (response.success) {
+      cart = response.cart;
+      renderCart();
+    }
+  } catch (error) {
+    console.error('Error removing from cart:', error);
   }
 }
 
 async function clearCart() {
   if (!confirm('Are you sure you want to clear your cart?')) return;
 
-  const response = await chrome.runtime.sendMessage({ action: 'clearCart' });
-  if (response.success) {
-    cart = [];
-    renderCart();
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'clearCart' });
+    if (response.success) {
+      cart = [];
+      renderCart();
+    }
+  } catch (error) {
+    console.error('Error clearing cart:', error);
   }
 }
 
 // ============================================================================
-// CHECKOUT RENDERING
-// ============================================================================
-
-function renderCheckout() {
-  const checkoutItemsEl = document.getElementById('checkoutItems');
-  const subtotal = calculateTotal();
-
-  // Get delivery fee from cart items (use max delivery fee)
-  const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
-  const total = subtotal + deliveryFee;
-
-  // Render checkout items summary
-  checkoutItemsEl.innerHTML = cart.map(item => `
-    <div class="checkout-item">
-      <span class="checkout-item-name">${escapeHtml(truncate(item.title, 30))}</span>
-      <span>${item.quantity}x ${item.price || 'N/A'}</span>
-    </div>
-  `).join('');
-
-  // Update totals
-  document.getElementById('checkoutTotal').textContent = `$${subtotal.toFixed(2)}`;
-
-  // Show delivery fee (Free if 0)
-  const deliveryDisplay = deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free';
-  document.getElementById('deliveryFee').textContent = deliveryDisplay;
-
-  // Convert to USDT (1:1 with USD for stablecoins)
-  document.getElementById('cryptoAmount').textContent = `${total.toFixed(2)} USDT`;
-}
-
-// ============================================================================
-// CRYPTO PAYMENT (Palindrome Pay Integration)
+// PAYMENT - Open Palindrome Pay checkout
 // ============================================================================
 
 async function initiatePayment() {
   const payBtn = document.getElementById('payWithCrypto');
-  const txStatusEl = document.getElementById('txStatus');
-  const txStatusTextEl = document.getElementById('txStatusText');
 
   // Validate cart
   if (cart.length === 0) {
@@ -296,84 +319,78 @@ async function initiatePayment() {
     return;
   }
 
+  // Check email is configured
   try {
-    payBtn.disabled = true;
-    txStatusEl.classList.remove('hidden', 'success', 'error');
-    txStatusTextEl.textContent = 'Preparing transaction...';
-
-    const subtotal = calculateTotal();
-    // Get delivery fee from cart items (use max delivery fee)
-    const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
-    const total = subtotal + deliveryFee;
-
-    // Create order summary for IPFS/title
-    const orderSummary = cart.map(item =>
-      `${item.quantity}x ${truncate(item.title, 50)}`
-    ).join('; ');
-
-    // Build checkout data
-    const checkoutData = {
-      token: config.tokenAddress,
-      seller: config.sellerAddress,
-      title: `Amazon Order: ${truncate(orderSummary, 200)}`,
-      cart: cart,
-      totalUSD: total,
-      deliveryFee: deliveryFee,
-      timestamp: new Date().toISOString(),
-    };
-
-    txStatusTextEl.textContent = 'Please confirm in your wallet...';
-
-    // Store checkout data for the checkout modal
-    await chrome.storage.local.set({ pendingCheckout: checkoutData });
-
-    txStatusTextEl.textContent = 'Opening checkout...';
-
-    // Get current active tab (should be Amazon page)
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-    if (tab && tab.url && tab.url.includes('amazon.com')) {
-      // Inject checkout modal into Amazon page where MetaMask is available
-      await chrome.tabs.sendMessage(tab.id, {
-        action: 'openCheckoutModal',
-        checkoutData: checkoutData
-      });
-
-      txStatusEl.classList.add('success');
-      txStatusTextEl.textContent = 'Checkout opened! Check the Amazon tab.';
-
-      // Close popup after a short delay
-      setTimeout(() => window.close(), 1500);
-    } else {
-      // Fallback: open checkout.html in new tab (limited wallet support)
-      chrome.tabs.create({
-        url: chrome.runtime.getURL('checkout.html')
-      });
-
-      txStatusEl.classList.add('success');
-      txStatusTextEl.textContent = 'Checkout opened in new tab!';
+    const emailResponse = await chrome.runtime.sendMessage({ action: 'getEmail' });
+    if (!emailResponse.success || !emailResponse.email || !emailResponse.email.email) {
+      showToast('Please configure your email in Settings first.', 'error');
+      switchTab('settings');
+      return;
     }
+
+    const savedEmailData = emailResponse.email;
+    const totalUSD = calculateTotal();
+
+    // Get delivery fee from cart items
+    const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
+    const total = totalUSD + deliveryFee;
+
+    // Build order title
+    const orderTitle = 'Amazon Order: ' + cart.map(i => `${i.quantity}x ${truncate(i.title, 30)}`).join(', ').substring(0, 200);
+
+    // Prepare items for JSON
+    const items = cart.map(item => ({
+      title: item.title,
+      qty: item.quantity,
+      price: item.price,
+      asin: item.asin,
+      img: item.imageUrl,
+      url: item.productUrl,
+      delivery: item.deliveryFee || 0
+    }));
+
+    // Get config
+    const sellerAddress = config.sellerAddress || '0x9Ca3100BfD6A2b00b9a6ED3Fc90F44617Bc8839C';
+    const tokenAddress = config.tokenAddress || '0xf8a8519313befc293bbe86fd40e993655cf7436b';
+    const checkoutBaseUrl = config.checkoutUrl || 'https://palindromepay.com/crypto-pay';
+
+    // Build Palindrome Pay URL
+    const params = new URLSearchParams({
+      seller: sellerAddress,
+      amount: total.toFixed(2),
+      title: orderTitle,
+      token: tokenAddress,
+      redirect: 'https://www.amazon.com',
+      product: 'true',
+      egift: 'true'
+    });
+
+    params.set('items', JSON.stringify(items));
+
+    if (savedEmailData.email) {
+      params.set('email', savedEmailData.email);
+    }
+    if (savedEmailData.recipientName) {
+      params.set('recipientName', savedEmailData.recipientName);
+    }
+
+    params.set('deliveryFee', deliveryFee.toFixed(2));
+
+    // Open checkout
+    const checkoutUrl = `${checkoutBaseUrl}?${params.toString()}`;
+    chrome.tabs.create({ url: checkoutUrl });
+
+    // Clear cart after opening checkout
+    await chrome.runtime.sendMessage({ action: 'clearCart' });
+    cart = [];
+    renderCart();
+
+    showToast('Checkout opened!', 'success');
 
   } catch (error) {
     console.error('Payment error:', error);
-    txStatusEl.classList.add('error');
-    txStatusTextEl.textContent = `Error: ${error.message}`;
-  } finally {
-    setTimeout(() => {
-      payBtn.disabled = !walletConnected || cart.length === 0;
-    }, 2000);
+    showToast('Error opening checkout. Please try again.', 'error');
   }
-}
-
-// Helper to convert to token units (simulated)
-function parseUnits(value, decimals) {
-  const parts = value.split('.');
-  let integer = parts[0];
-  let fraction = parts[1] || '';
-  
-  fraction = fraction.padEnd(decimals, '0').slice(0, decimals);
-  
-  return BigInt(integer + fraction);
 }
 
 // ============================================================================
@@ -385,7 +402,6 @@ function showToast(message, type = 'info', duration = 4000) {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
 
-  // Icon based on type
   const icons = {
     success: '✓',
     error: '✕',
@@ -396,7 +412,6 @@ function showToast(message, type = 'info', duration = 4000) {
   toast.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${message}</span>`;
   container.appendChild(toast);
 
-  // Auto remove after duration
   setTimeout(() => {
     toast.classList.add('hiding');
     setTimeout(() => toast.remove(), 300);
@@ -416,13 +431,4 @@ function escapeHtml(text) {
 function truncate(str, length) {
   if (!str) return '';
   return str.length > length ? str.substring(0, length) + '...' : str;
-}
-
-function truncateAddress(address) {
-  if (!address) return '';
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
-
-function isValidAddress(address) {
-  return /^0x[a-fA-F0-9]{40}$/.test(address);
 }
