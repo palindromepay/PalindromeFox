@@ -457,22 +457,18 @@
       imageUrl = trackedImageUrl;
     }
 
-    // Get product price
-    const priceElement = document.querySelector('.a-price .a-offscreen') ||
-                         document.getElementById('priceblock_ourprice') ||
-                         document.getElementById('priceblock_dealprice') ||
-                         document.querySelector('.a-price-whole') ||
-                         document.querySelector('[data-a-color="price"] .a-offscreen');
-    let price = priceElement ? priceElement.textContent.trim() : 'Price not available';
-    
-    // Clean up price if needed
-    if (price && !price.startsWith('$')) {
-      const priceWhole = document.querySelector('.a-price-whole');
-      const priceFraction = document.querySelector('.a-price-fraction');
+    // Get product price from the priceToPay element (the displayed selected price)
+    let price = 'Price not available';
+
+    const priceToPayEl = document.querySelector('.priceToPay');
+    if (priceToPayEl) {
+      const priceWhole = priceToPayEl.querySelector('.a-price-whole');
+      const priceFraction = priceToPayEl.querySelector('.a-price-fraction');
       if (priceWhole) {
-        price = '$' + priceWhole.textContent.replace(',', '').trim();
-        if (priceFraction) {
-          price += priceFraction.textContent.trim();
+        const whole = priceWhole.textContent.replace(/[^0-9]/g, '');
+        const fraction = priceFraction ? priceFraction.textContent.replace(/[^0-9]/g, '') : '00';
+        if (whole) {
+          price = '$' + whole + '.' + fraction;
         }
       }
     }

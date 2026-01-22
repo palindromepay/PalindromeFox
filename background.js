@@ -56,10 +56,28 @@ async function addToCart(product) {
   try {
     const result = await chrome.storage.local.get('cart');
     const cart = result.cart || [];
-    const existingIndex = cart.findIndex(p => p.asin === product.asin);
+
+    // Calculate current cart total
+    const currentTotal = cart.reduce((sum, item) => {
+      const price = parseFloat((item.price || '0').replace(/[^0-9.]/g, ''));
+      return sum + (price * (item.quantity || 1));
+    }, 0);
+
+    // Calculate new item price
+    const newItemPrice = parseFloat((product.price || '0').replace(/[^0-9.]/g, ''));
+    const newItemQuantity = product.quantity || 1;
+
+    // Check if adding this item would exceed $500 limit
+    // Match on both ASIN and price (different gift card amounts = different items)
+    const existingIndex = cart.findIndex(p => p.asin === product.asin && p.price === product.price);
+    let additionalAmount = newItemPrice * newItemQuantity;
+
+    if (currentTotal + additionalAmount > 500) {
+      return { success: false, error: `Cart total cannot exceed $500. Current total: $${currentTotal.toFixed(2)}` };
+    }
 
     if (existingIndex >= 0) {
-      cart[existingIndex].quantity += product.quantity || 1;
+      cart[existingIndex].quantity += newItemQuantity;
     } else {
       product.id = `${product.asin}-${Date.now()}`;
       cart.push(product);
