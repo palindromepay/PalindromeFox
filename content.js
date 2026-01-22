@@ -3,6 +3,9 @@
 (function() {
   'use strict';
 
+  // Track the current main product image for variant changes
+  let trackedImageUrl = '';
+
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
@@ -413,13 +416,46 @@
                          document.querySelector('h1.a-size-large');
     const title = titleElement ? titleElement.textContent.trim() : 'Unknown Product';
 
-    // Get product image
-    const imageElement = document.getElementById('landingImage') ||
-                         document.getElementById('imgBlkFront') ||
-                         document.querySelector('#main-image-container img') ||
-                         document.querySelector('#imageBlock img') ||
-                         document.querySelector('.a-dynamic-image');
-    const imageUrl = imageElement ? (imageElement.src || imageElement.dataset.src || imageElement.dataset.oldHires) : '';
+    // Get product image - always query DOM fresh at click time for accuracy
+    let imageUrl = '';
+
+    // First, try to get image from selected design swatch (for eGift cards)
+    const selectedSwatch = document.querySelector('.swatchSelect .a-button-selected .imgSwatch') ||
+                           document.querySelector('[data-defaultasin].swatchSelect .a-button-selected img') ||
+                           document.querySelector('.twisterSwatchWrapper .a-button-selected img');
+    if (selectedSwatch && selectedSwatch.src && selectedSwatch.src.startsWith('http')) {
+      // Convert thumbnail URL to larger size (replace _SS36_ or similar with _SX300_)
+      imageUrl = selectedSwatch.src.replace(/\._[A-Z]{2}\d+_\./, '._SX300_.');
+    }
+
+    // Fallback to main product image
+    if (!imageUrl) {
+      const imageElement = document.getElementById('landingImage') ||
+                           document.getElementById('imgBlkFront') ||
+                           document.querySelector('#main-image-container img') ||
+                           document.querySelector('#imageBlock img') ||
+                           document.querySelector('.a-dynamic-image');
+      if (imageElement) {
+        // Try multiple sources - prefer data-old-hires as it contains the high-res version
+        const candidates = [
+          imageElement.dataset.oldHires,
+          imageElement.src,
+          imageElement.dataset.src
+        ];
+        // Find first valid http(s) URL (skip data: and blob: URLs)
+        for (const url of candidates) {
+          if (url && url.startsWith('http')) {
+            imageUrl = url;
+            break;
+          }
+        }
+      }
+    }
+
+    // Last fallback to tracked image
+    if (!imageUrl && trackedImageUrl && trackedImageUrl.startsWith('http')) {
+      imageUrl = trackedImageUrl;
+    }
 
     // Get product price
     const priceElement = document.querySelector('.a-price .a-offscreen') ||
@@ -488,6 +524,40 @@
       giftCardRecipientName,
       addedAt: new Date().toISOString()
     };
+  }
+
+  // Track main product image for variant/design changes
+  function setupImageTracking() {
+    const imageElement = document.getElementById('landingImage') ||
+                         document.getElementById('imgBlkFront') ||
+                         document.querySelector('#main-image-container img');
+
+    if (!imageElement) return;
+
+    // Helper to get valid image URL (only http/https, not data: or blob:)
+    const getValidImageUrl = (el) => {
+      const candidates = [el.dataset.oldHires, el.src, el.dataset.src];
+      for (const url of candidates) {
+        if (url && url.startsWith('http')) return url;
+      }
+      return '';
+    };
+
+    // Initialize with current image
+    trackedImageUrl = getValidImageUrl(imageElement);
+
+    // Watch for image source changes (when user selects different variant)
+    const imageObserver = new MutationObserver(() => {
+      const newSrc = getValidImageUrl(imageElement);
+      if (newSrc && newSrc !== trackedImageUrl) {
+        trackedImageUrl = newSrc;
+      }
+    });
+
+    imageObserver.observe(imageElement, {
+      attributes: true,
+      attributeFilter: ['src', 'data-old-hires', 'data-src']
+    });
   }
 
   // Extract delivery fee from Amazon product page
@@ -568,6 +638,9 @@
     // Autofill Amazon's gift card email field with saved email from settings
     autofillGiftCardEmail();
 
+    // Start tracking the main product image for variant changes
+    setupImageTracking();
+
     // Add click handler
     const customBtn = document.getElementById('custom-add-to-cart-btn');
     const feedbackEl = document.getElementById('custom-cart-feedback');
@@ -630,6 +703,15 @@
       // Validate price is present
       if (!productInfo.price || productInfo.price === 'Price not available') {
         showFeedback(feedbackEl, 'Could not get price. Please select an amount.', 'error');
+        resetButton(customBtn);
+        isProcessing = false;
+        return;
+      }
+
+      // Validate price does not exceed $500
+      const priceValue = parseFloat(productInfo.price.replace(/[^0-9.]/g, ''));
+      if (priceValue > 500) {
+        showFeedback(feedbackEl, 'Maximum gift card value is $500.', 'error');
         resetButton(customBtn);
         isProcessing = false;
         return;
