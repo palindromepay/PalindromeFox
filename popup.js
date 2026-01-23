@@ -1,6 +1,76 @@
 // popup.js - Cart UI and Palindrome Pay Integration
 
 // ============================================================================
+// CURRENCY CONVERSION (using frankfurter.dev)
+// ============================================================================
+
+// Map currency symbols to ISO codes
+const CURRENCY_CODES = {
+  '$': 'USD',
+  'US$': 'USD',
+  '£': 'GBP',
+  '€': 'EUR',
+  'CHF': 'CHF',
+  'CAD': 'CAD',
+  'AUD': 'AUD',
+  '¥': 'JPY'
+};
+
+// Cache for exchange rates (avoid repeated API calls)
+let exchangeRateCache = {};
+
+// Get ISO currency code from symbol
+function getCurrencyCode(symbol) {
+  if (!symbol) return 'USD';
+  // Check direct match
+  if (CURRENCY_CODES[symbol]) return CURRENCY_CODES[symbol];
+  // Check if symbol is already an ISO code
+  if (symbol.length === 3 && symbol === symbol.toUpperCase()) return symbol;
+  // Default to USD
+  return 'USD';
+}
+
+// Fetch exchange rate from frankfurter.dev
+async function getExchangeRate(fromCurrency, toCurrency = 'USD') {
+  if (fromCurrency === toCurrency) return 1;
+
+  const cacheKey = `${fromCurrency}_${toCurrency}`;
+  const now = Date.now();
+
+  // Use cached rate if less than 10 minutes old
+  if (exchangeRateCache[cacheKey] && (now - exchangeRateCache[cacheKey].timestamp) < 600000) {
+    return exchangeRateCache[cacheKey].rate;
+  }
+
+  try {
+    const response = await fetch(`https://api.frankfurter.dev/v1/latest?base=${fromCurrency}&symbols=${toCurrency}`);
+    if (!response.ok) throw new Error('API request failed');
+
+    const data = await response.json();
+    const rate = data.rates[toCurrency];
+
+    // Cache the rate
+    exchangeRateCache[cacheKey] = { rate, timestamp: now };
+
+    return rate;
+  } catch (error) {
+    console.error('Failed to fetch exchange rate:', error);
+    // Return fallback rates if API fails
+    const fallbackRates = { CHF: 1.12, GBP: 1.27, EUR: 1.08, CAD: 0.74, AUD: 0.65, JPY: 0.0067 };
+    return fallbackRates[fromCurrency] || 1;
+  }
+}
+
+// Convert amount to USD
+async function convertToUSD(amount, currencySymbol) {
+  const currencyCode = getCurrencyCode(currencySymbol);
+  if (currencyCode === 'USD') return amount;
+
+  const rate = await getExchangeRate(currencyCode, 'USD');
+  return amount * rate;
+}
+
+// ============================================================================
 // STATE
 // ============================================================================
 
@@ -229,9 +299,27 @@ function renderCart() {
   const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
   const total = subtotal + deliveryFee;
 
-  document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById('deliveryFee').textContent = deliveryFee > 0 ? `$${deliveryFee.toFixed(2)}` : 'Free';
-  document.getElementById('totalPrice').textContent = `$${total.toFixed(2)}`;
+  // Use currency from first item in cart (default to $)
+  const currency = cart.length > 0 && cart[0].currency ? cart[0].currency : '$';
+  const currencyCode = getCurrencyCode(currency);
+
+  document.getElementById('subtotal').textContent = `${currency}${subtotal.toFixed(2)}`;
+  document.getElementById('deliveryFee').textContent = deliveryFee > 0 ? `${currency}${deliveryFee.toFixed(2)}` : 'Free';
+  document.getElementById('totalPrice').textContent = `${currency}${total.toFixed(2)}`;
+
+  // Show USD equivalent if currency is not USD
+  const usdEquivEl = document.getElementById('usdEquivalent');
+  if (usdEquivEl) {
+    if (currencyCode !== 'USD' && cart.length > 0) {
+      // Fetch and display USD equivalent
+      convertToUSD(total, currency).then(usdTotal => {
+        usdEquivEl.textContent = `≈ $${usdTotal.toFixed(2)} USD`;
+        usdEquivEl.style.display = 'block';
+      });
+    } else {
+      usdEquivEl.style.display = 'none';
+    }
+  }
 }
 
 function calculateTotal() {
@@ -327,7 +415,30 @@ async function initiatePayment() {
     }
 
     const savedEmailData = emailResponse.email;
-    const totalUSD = calculateTotal();
+
+    // Convert cart total to USD using live exchange rates
+    let totalUSD = 0;
+    const itemsWithUSD = [];
+
+    for (const item of cart) {
+      const priceNum = parsePrice(item.price);
+      const priceUSD = await convertToUSD(priceNum, item.currency);
+      const itemTotalUSD = priceUSD * item.quantity;
+      totalUSD += itemTotalUSD;
+
+      itemsWithUSD.push({
+        title: item.title,
+        qty: item.quantity,
+        price: item.price,
+        priceUSD: priceUSD.toFixed(2),
+        currency: item.currency || '$',
+        marketplace: item.marketplace || 'amazon.com',
+        asin: item.asin,
+        img: item.imageUrl,
+        url: item.productUrl,
+        delivery: item.deliveryFee || 0
+      });
+    }
 
     // Get delivery fee from cart items
     const deliveryFee = Math.max(...cart.map(item => item.deliveryFee || 0), 0);
@@ -335,17 +446,6 @@ async function initiatePayment() {
 
     // Build order title
     const orderTitle = 'Amazon Order: ' + cart.map(i => `${i.quantity}x ${truncate(i.title, 30)}`).join(', ').substring(0, 200);
-
-    // Prepare items for JSON
-    const items = cart.map(item => ({
-      title: item.title,
-      qty: item.quantity,
-      price: item.price,
-      asin: item.asin,
-      img: item.imageUrl,
-      url: item.productUrl,
-      delivery: item.deliveryFee || 0
-    }));
 
     // Get config
     const sellerAddress = config.sellerAddress || '0x9Ca3100BfD6A2b00b9a6ED3Fc90F44617Bc8839C';
@@ -363,7 +463,7 @@ async function initiatePayment() {
       egift: 'true'
     });
 
-    params.set('items', JSON.stringify(items));
+    params.set('items', JSON.stringify(itemsWithUSD));
 
     if (savedEmailData.email) {
       params.set('email', savedEmailData.email);
@@ -374,6 +474,11 @@ async function initiatePayment() {
 
     params.set('deliveryFee', deliveryFee.toFixed(2));
 
+    // Clear cart before opening checkout (popup may close after tab opens)
+    await chrome.runtime.sendMessage({ action: 'clearCart' });
+    cart = [];
+    renderCart();
+
     // Open checkout
     const checkoutUrl = `${checkoutBaseUrl}?${params.toString()}`;
     try {
@@ -383,13 +488,6 @@ async function initiatePayment() {
       showToast('Error opening checkout. Please try again.', 'error');
       return;
     }
-
-    // Clear cart after opening checkout
-    await chrome.runtime.sendMessage({ action: 'clearCart' });
-    cart = [];
-    renderCart();
-
-    showToast('Checkout opened!', 'success');
 
   } catch (error) {
     console.error('Payment error:', error);

@@ -4,7 +4,13 @@
   "version": "1.1.0",
   "description": "Pay for Amazon products with crypto using Palindrome Pay",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://www.amazon.com/*", "https://amazon.com/*"],
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://amazon.com/*",
+    "https://www.amazon.co.uk/*",
+    "https://amazon.co.uk/*",
+    "https://api.frankfurter.dev/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -22,7 +28,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.amazon.com/*", "https://amazon.com/*"],
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://amazon.com/*",
+        "https://www.amazon.co.uk/*",
+        "https://amazon.co.uk/*"
+      ],
       "js": ["content.js"],
       "css": ["content-styles.css"]
     }
@@ -36,7 +47,12 @@
         "logoPalindromePay.png",
         "palindromepay-crypto-escrow-payment.png"
       ],
-      "matches": ["https://www.amazon.com/*", "https://amazon.com/*"]
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://amazon.com/*",
+        "https://www.amazon.co.uk/*",
+        "https://amazon.co.uk/*"
+      ]
     }
   ],
   "content_security_policy": {

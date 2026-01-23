@@ -457,18 +457,28 @@
       imageUrl = trackedImageUrl;
     }
 
-    // Get product price from the priceToPay element (the displayed selected price)
+    // Get product price - support US (.priceToPay) and UK (#corePrice_feature_div)
     let price = 'Price not available';
+    let currencySymbol = '$';
 
-    const priceToPayEl = document.querySelector('.priceToPay');
-    if (priceToPayEl) {
-      const priceWhole = priceToPayEl.querySelector('.a-price-whole');
-      const priceFraction = priceToPayEl.querySelector('.a-price-fraction');
+    // Try US selector first (.priceToPay), then UK/generic (#corePrice_feature_div .a-price)
+    let priceContainer = document.querySelector('.priceToPay') ||
+                         document.querySelector('#corePrice_feature_div .a-price');
+
+    if (priceContainer) {
+      // Detect currency symbol
+      const symbolEl = priceContainer.querySelector('.a-price-symbol');
+      if (symbolEl) {
+        currencySymbol = symbolEl.textContent.trim();
+      }
+
+      const priceWhole = priceContainer.querySelector('.a-price-whole');
+      const priceFraction = priceContainer.querySelector('.a-price-fraction');
       if (priceWhole) {
         const whole = priceWhole.textContent.replace(/[^0-9]/g, '');
         const fraction = priceFraction ? priceFraction.textContent.replace(/[^0-9]/g, '') : '00';
         if (whole) {
-          price = '$' + whole + '.' + fraction;
+          price = currencySymbol + whole + '.' + fraction;
         }
       }
     }
@@ -497,6 +507,15 @@
     // Get product URL
     const productUrl = window.location.href.split('?')[0];
 
+    // Get site/marketplace info from hostname
+    const hostname = window.location.hostname;
+    let marketplace = 'amazon.com';
+    if (hostname.includes('amazon.co.uk')) {
+      marketplace = 'amazon.co.uk';
+    } else if (hostname.includes('amazon.com')) {
+      marketplace = 'amazon.com';
+    }
+
     // Get quantity (default to 1)
     const quantitySelect = document.getElementById('quantity');
     const quantity = quantitySelect ? parseInt(quantitySelect.value) || 1 : 1;
@@ -512,8 +531,10 @@
       title,
       imageUrl,
       price,
+      currency: currencySymbol,
       asin,
       productUrl,
+      marketplace,
       quantity,
       deliveryFee,
       giftCardEmail,
