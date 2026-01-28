@@ -22,24 +22,3 @@ A Chrome extension that lets you add Amazon products to a custom cart and checko
 
 5. **Pin the extension** to your toolbar for easy access
 
-## Escrow Flow
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   BUYER     │     │   ESCROW    │     │   SELLER    │
-│  (You)      │     │  (Contract) │     │ (Merchant)  │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │
-       │ 1. Create & Pay   │                   │
-       │──────────────────>│                   │
-       │                   │ 2. Accept Order   │
-       │                   │<──────────────────│
-       │                   │                   │
-       │   (Product Ships) │                   │
-       │                   │                   │
-       │ 3. Confirm Receipt│                   │
-       │──────────────────>│                   │
-       │                   │ 4. Funds Released │
-       │                   │──────────────────>│
-       └───────────────────┴───────────────────┘
-```
