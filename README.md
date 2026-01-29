@@ -1,4 +1,4 @@
-# Buy Amazon Gift Cards with Crypto
+# Palindrome Fox - Buy Amazon Gift Cards with Crypto
 
 ![Buy on Amazon with Crypto](buy-on-amazon-with-crypto-palindrome-pay.jpeg)
 
