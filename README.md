@@ -1,8 +1,8 @@
-# Palindrome Fox 🦊 - Buy on Amazon with Crypto
+# Buy Amazon Gift Cards with Crypto
 
 ![Buy on Amazon with Crypto](buy-on-amazon-with-crypto-palindrome-pay.jpeg)
 
-A Chrome extension that lets you add Amazon products to a custom cart and checkout using cryptocurrency via **Palindrome Pay** with Built-In Escrow (currently only Gift Cards activated).
+A Chrome extension that lets you buy Amazon Gift Cards with cryptocurrency via **Palindrome Pay** with Built-In Escrow.
 
 ## How It Works
 
